@@ -4,20 +4,25 @@ import { initialTasks } from 'src/shared/data';
 const STORAGE_KEY = 'app_tasks_v1';
 
 export function loadTasks(): TaskType[] {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return initialTasks;
+  }
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) return JSON.parse(raw) as TaskType[];
   } catch (err) {
-   throw err;
   }
+
   return initialTasks;
 }
 
 export function saveTasks(tasks: TaskType[]) {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return;
+
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
   } catch (err) {
-    throw err;
   }
 }
 
