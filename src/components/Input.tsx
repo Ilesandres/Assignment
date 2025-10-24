@@ -18,7 +18,7 @@ export default function Input({
   autoComplete,
 }: InputProps) {
   const inputStyle: React.CSSProperties = {
-    backgroundColor: 'var(--color-surface)',
+    backgroundColor: 'var(--color-backgorund)',
     color: 'var(--color-text)',
     borderColor: 'var(--color-text-muted)',
   };
