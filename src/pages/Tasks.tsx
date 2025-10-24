@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Button, Navbar, Input } from '../components';
 import type { Task as TaskType, TaskStatus } from 'src/shared';
-import { initialTasks } from 'src/shared/data';
 import { statusColumnBg, statusPillClass } from 'src/shared/ui';
+import { loadTasks, saveTasks, addTask as svcAddTask, updateTaskStatus as svcUpdateTaskStatus, deleteTask as svcDeleteTask, groupByStatus } from 'src/services/taskService';
 
 const statusLabels: Record<TaskStatus, string> = {
   'waiting': 'En espera',
@@ -12,7 +12,7 @@ const statusLabels: Record<TaskStatus, string> = {
 };
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<TaskType[]>(initialTasks);
+  const [tasks, setTasks] = useState<TaskType[]>(() => loadTasks());
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [statusSel, setStatusSel] = useState<TaskStatus>('waiting');
@@ -20,8 +20,12 @@ export default function Tasks() {
   const [time, setTime] = useState('');
   const [showForm, setShowForm] = useState(true);
 
+  useEffect(() => {
+    saveTasks(tasks);
+  }, [tasks]);
+
   function updateStatus(id: string, status: TaskStatus) {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+    setTasks((prev) => svcUpdateTaskStatus(prev, id, status));
   }
 
   function addTask(e?: React.FormEvent) {
@@ -37,7 +41,7 @@ export default function Tasks() {
       status: statusSel,
     };
 
-    setTasks((prev) => [newTask, ...prev]);
+  setTasks((prev) => svcAddTask(prev, newTask));
     setTitle('');
     setDescription('');
     setDate('');
@@ -46,17 +50,10 @@ export default function Tasks() {
   }
 
   function deleteTask(id: string) {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setTasks((prev) => svcDeleteTask(prev, id));
   }
 
-  const grouped: Record<TaskStatus, TaskType[]> = {
-    'waiting': [],
-    'in-progress': [],
-    'completed': [],
-    'abandoned': [],
-  };
-
-  tasks.forEach((t) => grouped[t.status].push(t));
+  const grouped = groupByStatus(tasks);
 
   return (
     <div className="min-h-screen var(--color-background)">
