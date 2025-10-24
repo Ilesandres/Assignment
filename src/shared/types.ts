@@ -12,9 +12,18 @@ export type InputPropsBase = {
     placeholder?: string;
     className?: string;
     error?: string;
-    /** Optional icon (React node) displayed inside the input at the right */
     icon?: React.ReactNode;
     disabled?: boolean;
     required?: boolean;
     autoComplete?: string;
+};
+
+export type TaskStatus = 'waiting' | 'in-progress' | 'completed' | 'abandoned';
+
+export type Task = {
+    id: string;
+    title: string;
+    description?: string;
+    due?: string;
+    status: TaskStatus;
 };
