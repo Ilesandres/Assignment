@@ -28,13 +28,13 @@ export default function Tasks() {
   tasks.forEach((t) => grouped[t.status].push(t));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen var(--color-background)">
       <Navbar />
 
       <div className="p-4 max-w-7xl mx-auto">
         <header className="mb-6">
           <h1 className="text-2xl font-semibold">Tareas</h1>
-          <p className="text-sm text-gray-600">Tablero simple con 4 columnas y estado local (simulado).</p>
+          <p className="text-sm var(--color-text)">Tablero simple (simulado).</p>
         </header>
 
         <div className="overflow-x-auto">
@@ -55,10 +55,10 @@ export default function Tasks() {
                         {grouped[status].map((task) => (
                           <Card key={task.id} className={`${task.status === 'completed' ? 'opacity-60' : ''}`} title={task.title}>
                             <div className="text-sm  mb-2">{task.description}</div>
-                            <div className="text-xs text-gray-500 mb-3">{task.due}</div>
+                            <div className="text-xs var(--color-text) mb-3">{task.due}</div>
 
                             <div className="flex items-center justify-between gap-2">
-                              <div className={`text-sm ${task.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-700'}`}>
+                              <div className={`text-sm ${task.status === 'completed' ? 'line-through var(--color-text)' : 'var(--color-text)'}`}>
                                 {statusLabels[task.status]}
                               </div>
 
