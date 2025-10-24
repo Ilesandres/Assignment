@@ -1,7 +1,9 @@
 import React from "react";
+import { btnVariants } from "../shared/ui";
+import type { ButtonVariant } from "../shared/types";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary";
+  variant?: ButtonVariant;
 };
 
 export default function Button({
@@ -13,14 +15,7 @@ export default function Button({
   const base =
     "inline-flex items-center justify-center px-4 py-2 rounded-md font-medium focus:outline-none focus:ring-2 focus:ring-offset-2";
 
-  const variants: Record<string, string> = {
-    primary:
-      "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
-    secondary:
-      "bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-300",
-  };
-
-  const classes = `${base} ${variants[variant]} ${className}`;
+  const classes = `${base} ${btnVariants[variant]} ${className}`;
 
   return (
     <button className={classes} {...rest}>

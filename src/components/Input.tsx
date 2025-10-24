@@ -1,15 +1,7 @@
 import React from "react";
+import type { InputPropsBase } from "src/shared";
 
-type InputProps = {
-  id?: string;
-  name?: string;
-  label?: string;
-  value?: string;
-  onChange?: React.ChangeEventHandler<HTMLInputElement>;
-  type?: string;
-  placeholder?: string;
-  className?: string;
-};
+type InputProps = React.InputHTMLAttributes<HTMLInputElement> & InputPropsBase;
 
 export default function Input({
   id,
@@ -20,12 +12,17 @@ export default function Input({
   type = "text",
   placeholder = "",
   className = "",
+  error,
+  disabled = false,
+  required = false,
+  autoComplete,
 }: InputProps) {
   return (
     <div className={`flex flex-col ${className}`}>
       {label && (
         <label htmlFor={id} className="mb-1 text-sm font-medium text-gray-700">
           {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
       <input
@@ -35,8 +32,20 @@ export default function Input({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        disabled={disabled}
+        required={required}
+        autoComplete={autoComplete}
+        className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors
+          ${error 
+            ? 'border-red-500 focus:ring-red-500' 
+            : 'border-gray-200 focus:ring-blue-500'
+          }
+          ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
+        `}
       />
+      {error && (
+        <span className="mt-1 text-sm text-red-500">{error}</span>
+      )}
     </div>
   );
 }
