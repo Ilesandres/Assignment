@@ -18,6 +18,7 @@ export default function Tasks() {
   const [statusSel, setStatusSel] = useState<TaskStatus>('waiting');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  const [showForm, setShowForm] = useState(true);
 
   function updateStatus(id: string, status: TaskStatus) {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
@@ -67,8 +68,42 @@ export default function Tasks() {
           <p className="text-sm var(--color-text)">Tablero simple (simulado).</p>
         </header>
 
-        {/* Form to add a new task */}
-        <form onSubmit={addTask} className="mb-6 grid grid-cols-1 lg:grid-cols-4 gap-3 items-end">
+        {/* Header + toggle for the form */}
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-medium">Agregar tarea</h2>
+            <p className="text-xs var(--color-text)">Crea una nueva tarea y asígnala a una columna.</p>
+          </div>
+          <div>
+            <button
+              type="button"
+              aria-expanded={showForm}
+              onClick={() => setShowForm((s) => !s)}
+              className="p-2 rounded-md hover:text-[var(--color-text-muted)] cursor-pointer"
+              title={showForm ? 'Ocultar formulario' : 'Mostrar formulario'}
+            >
+              {showForm ? (
+                // Up arrow (collapse)
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                  <path d="M5 3h14"></path>
+                  <path d="m18 13-6-6-6 6"></path>
+                  <path d="M12 7v14"></path>
+                </svg>
+              ) : (
+                // Down arrow (expand)
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                  <path d="M12 17V3"></path>
+                  <path d="m6 11 6 6 6-6"></path>
+                  <path d="M19 21H5"></path>
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Form to add a new task (collapsible) */}
+        {showForm && (
+          <form onSubmit={addTask} className="mb-6 grid grid-cols-1 lg:grid-cols-4 gap-3 items-end">
           <div className="lg:col-span-2">
             <Input id="new-title" label="Título" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nueva tarea" />
           </div>
@@ -104,7 +139,8 @@ export default function Tasks() {
             <Button type="submit" className="px-4 py-2">Agregar tarea</Button>
             <Button type="button" variant="secondary" onClick={() => { setTitle(''); setDescription(''); setDate(''); setTime(''); setStatusSel('waiting'); }} className="px-4 py-2">Limpiar</Button>
           </div>
-        </form>
+          </form>
+        )}
 
         <div className="overflow-x-auto">
           <div className="min-w-[900px] grid grid-cols-4 gap-4">
