@@ -18,7 +18,7 @@ export default function Input({
   autoComplete,
 }: InputProps) {
   const inputStyle: React.CSSProperties = {
-    backgroundColor: 'var(--color-surface)',
+    backgroundColor: 'var(--color-backgorund)',
     color: 'var(--color-text)',
     borderColor: 'var(--color-text-muted)',
   };
@@ -26,7 +26,7 @@ export default function Input({
   return (
     <div className={`flex flex-col ${className}`}>
       {label && (
-        <label htmlFor={id} className="mb-1 text-sm font-medium text-gray-700">
+        <label htmlFor={id} className="mb-1 text-sm font-medium var(--color-text)">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>

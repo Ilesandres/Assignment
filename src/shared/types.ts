@@ -12,6 +12,8 @@ export type InputPropsBase = {
     placeholder?: string;
     className?: string;
     error?: string;
+    /** Optional icon (React node) displayed inside the input at the right */
+    icon?: React.ReactNode;
     disabled?: boolean;
     required?: boolean;
     autoComplete?: string;
