@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Button, Navbar } from '../components';
+import { Card, Button, Navbar, Input } from '../components';
 import type { Task as TaskType, TaskStatus } from 'src/shared';
 import { initialTasks } from 'src/shared/data';
 import { statusColumnBg, statusPillClass } from 'src/shared/ui';
@@ -13,9 +13,39 @@ const statusLabels: Record<TaskStatus, string> = {
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<TaskType[]>(initialTasks);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [statusSel, setStatusSel] = useState<TaskStatus>('waiting');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
 
   function updateStatus(id: string, status: TaskStatus) {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)));
+  }
+
+  function addTask(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!title.trim()) return;
+
+    const due = date ? (time ? `${date} ${time}` : date) : undefined;
+    const newTask: TaskType = {
+      id: `t${Date.now()}`,
+      title: title.trim(),
+      description: description.trim(),
+      due: due,
+      status: statusSel,
+    };
+
+    setTasks((prev) => [newTask, ...prev]);
+    setTitle('');
+    setDescription('');
+    setDate('');
+    setTime('');
+    setStatusSel('waiting');
+  }
+
+  function deleteTask(id: string) {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
   }
 
   const grouped: Record<TaskStatus, TaskType[]> = {
@@ -37,6 +67,45 @@ export default function Tasks() {
           <p className="text-sm var(--color-text)">Tablero simple (simulado).</p>
         </header>
 
+        {/* Form to add a new task */}
+        <form onSubmit={addTask} className="mb-6 grid grid-cols-1 lg:grid-cols-4 gap-3 items-end">
+          <div className="lg:col-span-2">
+            <Input id="new-title" label="Título" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nueva tarea" />
+          </div>
+
+          <div>
+            <label htmlFor="status" className="block text-sm font-medium var(--color-text)">Estado</label>
+            <select id="status" value={statusSel} onChange={(e) => setStatusSel(e.target.value as TaskStatus)} className="block w-full px-3 py-2 border rounded-md"
+                style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-text)' }}>
+
+              <option value="waiting">En espera</option>
+              <option value="in-progress">En proceso</option>
+              <option value="completed">Completado</option>
+              <option value="abandoned">Abandonado</option>
+            </select>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="w-1/2">
+              <label htmlFor="date" className="block text-sm font-medium var(--color-text) mb-1">Fecha</label>
+              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="w-1/2">
+              <label htmlFor="time" className="block text-sm font-medium var(--color-text) mb-1">Hora</label>
+              <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="lg:col-span-4">
+            <Input id="desc" label="Descripción (opcional)" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalles" />
+          </div>
+
+          <div className="lg:col-span-4 flex gap-2">
+            <Button type="submit" className="px-4 py-2">Agregar tarea</Button>
+            <Button type="button" variant="secondary" onClick={() => { setTitle(''); setDescription(''); setDate(''); setTime(''); setStatusSel('waiting'); }} className="px-4 py-2">Limpiar</Button>
+          </div>
+        </form>
+
         <div className="overflow-x-auto">
           <div className="min-w-[900px] grid grid-cols-4 gap-4">
                 {(['waiting', 'in-progress', 'completed', 'abandoned'] as TaskStatus[]).map((status) => {
@@ -54,6 +123,14 @@ export default function Tasks() {
 
                         {grouped[status].map((task) => (
                           <Card key={task.id} className={`${task.status === 'completed' ? 'opacity-60' : ''}`} title={task.title}>
+                            <div className="flex justify-end mb-2">
+                              <button type="button" onClick={() => deleteTask(task.id)} className="p-1 rounded-md hover:bg-gray-100">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" className="var(--color-text-muted)">
+                                  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                  <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                </svg>
+                              </button>
+                            </div>
                             <div className="text-sm  mb-2">{task.description}</div>
                             <div className="text-xs var(--color-text) mb-3">{task.due}</div>
 
