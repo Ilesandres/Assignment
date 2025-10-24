@@ -17,6 +17,12 @@ export default function Input({
   required = false,
   autoComplete,
 }: InputProps) {
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    borderColor: 'var(--color-text-muted)',
+  };
+
   return (
     <div className={`flex flex-col ${className}`}>
       {label && (
@@ -35,6 +41,7 @@ export default function Input({
         disabled={disabled}
         required={required}
         autoComplete={autoComplete}
+        style={inputStyle}
         className={`px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors
           ${error 
             ? 'border-red-500 focus:ring-red-500' 
