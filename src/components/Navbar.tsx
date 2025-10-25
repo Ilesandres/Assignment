@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 type NavbarProps = {
   onToggleSidebar?: () => void;
@@ -8,6 +9,7 @@ type NavbarProps = {
 export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -33,6 +35,11 @@ export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
     else console.log('logout clicked');
   }
 
+  function handleNavigation(path: string) {
+    setOpen(false);
+    navigate(path);
+  }
+
   return (
     <header
       className="w-full shadow-sm border-b"
@@ -52,7 +59,13 @@ export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
               </svg>
             </button>
 
-            <div className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>Task Manager</div>
+            <button 
+              onClick={() => navigate('/')}
+              className="text-lg font-semibold hover:opacity-80 transition-opacity" 
+              style={{ color: 'var(--color-text)' }}
+            >
+              Task Manager
+            </button>
           </div>
 
           <div className="flex items-center gap-4 relative">
@@ -63,7 +76,7 @@ export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
             <div className="relative nav rounded-lg" ref={menuRef}>
               <button
                 onClick={() => setOpen((s) => !s)}
-                className="p-1 rounded-full focus:outline-none  cursor-pointer "
+                className="p-1 rounded-full focus:outline-none cursor-pointer"
                 aria-haspopup="true"
                 aria-expanded={open}
                 aria-label="Open user menu"
@@ -79,9 +92,30 @@ export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
                   role="menu"
                 >
                   <div className="py-1">
-                    <button className="w-full text-left px-4 py-2 text-sm nav cursor-pointer " style={{ color: 'var(--color-text)' }} role="menuitem">Perfil</button>
-                    <button className="w-full text-left px-4 py-2 text-sm nav cursor-pointer" style={{ color: 'var(--color-text)' }} role="menuitem">Dashboard</button>
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm nav cursor-pointer" style={{ color: 'var(--color-text)' }} role="menuitem">Logout</button>
+                    <button 
+                      onClick={() => handleNavigation('/profile')} 
+                      className="w-full text-left px-4 py-2 text-sm nav cursor-pointer hover:bg-gray-100 transition-colors" 
+                      style={{ color: 'var(--color-text)' }} 
+                      role="menuitem"
+                    >
+                      Perfil
+                    </button>
+                    <button 
+                      onClick={() => handleNavigation('/dashboard')} 
+                      className="w-full text-left px-4 py-2 text-sm nav cursor-pointer hover:bg-gray-100 transition-colors" 
+                      style={{ color: 'var(--color-text)' }} 
+                      role="menuitem"
+                    >
+                      Dashboard
+                    </button>
+                    <button 
+                      onClick={handleLogout} 
+                      className="w-full text-left px-4 py-2 text-sm nav cursor-pointer hover:bg-gray-100 transition-colors" 
+                      style={{ color: 'var(--color-text)' }} 
+                      role="menuitem"
+                    >
+                      Logout
+                    </button>
                   </div>
                 </div>
               )}

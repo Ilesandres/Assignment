@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 type SidebarProps = {
   isOpen?: boolean;
@@ -6,6 +7,16 @@ type SidebarProps = {
 };
 
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+  const navigate = useNavigate();
+
+  const handleTasksClick = () => {
+    navigate('/task');
+    // Cerrar sidebar en móvil después de navegar
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-20 w-64 transform bg-white border-r border-gray-100 shadow-lg transition-transform duration-200 ease-in-out
@@ -32,7 +43,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
               <a href="#" className="block px-3 py-2 rounded-md hover:bg-gray-50">Inicio</a>
             </li>
             <li>
-              <a href="#" className="block px-3 py-2 rounded-md hover:bg-gray-50">Tareas</a>
+              <button 
+                onClick={handleTasksClick}
+                className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 cursor-pointer"
+              >
+                Tareas
+              </button>
             </li>
             <li>
               <a href="#" className="block px-3 py-2 rounded-md hover:bg-gray-50">Proyectos</a>
