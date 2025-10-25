@@ -6,7 +6,7 @@ const Dashboard: React.FC = () => {
   return (
     <Layout>
       <div className="p-6 min-h-screen bg-gray-50">
-        {/* Encabezado */}
+        
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
@@ -19,7 +19,7 @@ const Dashboard: React.FC = () => {
           </div>
         </header>
 
-        {/* Grid de tarjetas */}
+        
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card>
             <h2 className="text-lg font-semibold text-gray-700 mb-2">
@@ -75,3 +75,4 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
+
