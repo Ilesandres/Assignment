@@ -9,6 +9,7 @@
   --color-primary-hover: #4338ca;
   --color-secondary: #06b6d4;
   --color-background: #f8fafc;
+  --color-hover: #cacaca;
   --color-surface: #ffffff;
   --color-text: #0f172a;
   --color-text-muted: #64748b;
@@ -32,6 +33,7 @@ body {
     --color-secondary: #22d3ee;
     --color-background: #0f172a;
     --color-surface: #1e293b;
+    --color-hover: #7d7d7d;
     --color-text: #f1f5f9;
     --color-text-muted: #94a3b8;
     --color-border: #334155;
@@ -48,4 +50,8 @@ body {
 
 .surface {
   background-color: var(--color-surface);
+}
+
+.nav:hover {
+  background-color: var(--color-hover);
 }
