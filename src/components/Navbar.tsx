@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import useAppStore from 'src/store/useAppStore';
 import { useNavigate } from 'react-router-dom';
 
 type NavbarProps = {
@@ -9,6 +10,8 @@ type NavbarProps = {
 export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const user = useAppStore((s) => s.user);
+  const logoutStore = useAppStore((s) => s.logout);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,7 +35,7 @@ export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
   function handleLogout() {
     setOpen(false);
     if (onLogout) onLogout();
-    else console.log('logout clicked');
+    else logoutStore();
   }
 
   function handleNavigation(path: string) {
@@ -70,7 +73,7 @@ export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
 
           <div className="flex items-center gap-4 relative">
             <div className="hidden sm:flex items-center text-sm" style={{ color: 'var(--color-text)' }}>
-              Bienvenido, Usuario
+              Bienvenido, {user?.name ?? 'Usuario'}
             </div>
 
             <div className="relative nav rounded-lg" ref={menuRef}>

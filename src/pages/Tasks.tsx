@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Card, Button, Navbar, Input } from '../components';
 import type { Task as TaskType, TaskStatus } from 'src/shared';
 import { statusColumnBg, statusPillClass } from 'src/shared/ui';
-import { loadTasks, saveTasks, addTask as svcAddTask, updateTaskStatus as svcUpdateTaskStatus, deleteTask as svcDeleteTask, groupByStatus } from 'src/services/taskService';
+import { groupByStatus } from 'src/services/taskService';
+import useAppStore from 'src/store/useAppStore';
 
 const statusLabels: Record<TaskStatus, string> = {
   'waiting': 'En espera',
@@ -12,7 +13,10 @@ const statusLabels: Record<TaskStatus, string> = {
 };
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<TaskType[]>(() => loadTasks());
+  const tasks = useAppStore((s) => s.tasks);
+  const addTaskAction = useAppStore((s) => s.addTask);
+  const updateStatusAction = useAppStore((s) => s.updateTaskStatus);
+  const deleteTaskAction = useAppStore((s) => s.deleteTask);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [statusSel, setStatusSel] = useState<TaskStatus>('waiting');
@@ -20,12 +24,8 @@ export default function Tasks() {
   const [time, setTime] = useState('');
   const [showForm, setShowForm] = useState(true);
 
-  useEffect(() => {
-    saveTasks(tasks);
-  }, [tasks]);
-
   function updateStatus(id: string, status: TaskStatus) {
-    setTasks((prev) => svcUpdateTaskStatus(prev, id, status));
+    updateStatusAction(id, status);
   }
 
   function addTask(e?: React.FormEvent) {
@@ -41,7 +41,7 @@ export default function Tasks() {
       status: statusSel,
     };
 
-  setTasks((prev) => svcAddTask(prev, newTask));
+  addTaskAction(newTask);
     setTitle('');
     setDescription('');
     setDate('');
@@ -50,7 +50,7 @@ export default function Tasks() {
   }
 
   function deleteTask(id: string) {
-    setTasks((prev) => svcDeleteTask(prev, id));
+    deleteTaskAction(id);
   }
 
   const grouped = groupByStatus(tasks);
