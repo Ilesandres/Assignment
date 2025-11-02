@@ -26,4 +26,5 @@ export type Task = {
     description?: string;
     due?: string;
     status: TaskStatus;
+    owner?: string;
 };
