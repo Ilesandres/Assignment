@@ -5,42 +5,48 @@ import { Button, Layout } from "src/components";
 const Profile: React.FC = () => {
   return (
     <Layout>
-      <div className="flex items-start justify-center w-full bg-[#f9fafb] text-gray-900 min-h-screen p-8">
-        <div className="flex items-center w-full max-w-5xl bg-white rounded-2xl shadow-sm p-10 gap-12 transition-all duration-500">
+      <div className="flex items-start justify-center w-full min-h-screen p-8" style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-text)' }}>
+        <div className="flex flex-col md:flex-row items-center w-full max-w-5xl rounded-2xl shadow-sm p-8 gap-8 transition-all duration-300" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
           
-          <div className="flex flex-col items-center text-center flex-1">
+          <div className="flex flex-col items-center text-center md:text-left md:items-start md:w-1/3">
             <div className="relative">
               <img
                 src="https://i.pravatar.cc/150?img=12"
                 alt="Avatar"
-                className="w-36 h-36 rounded-full border-4 border-indigo-500 hover:scale-105 transition-transform duration-300"
+                className="w-32 h-32 rounded-full border-4 hover:scale-105 transition-transform duration-300"
+                style={{ borderColor: 'var(--color-primary)' }}
               />
-              <span className="absolute bottom-3 right-3 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></span>
+              <span className="absolute bottom-3 right-3 w-4 h-4 rounded-full border-2" style={{ backgroundColor: 'var(--color-secondary)', borderColor: 'var(--color-surface)' }}></span>
             </div>
-            <h2 className="mt-4 text-2xl font-semibold">Marlon Moncayo</h2>
-            <p className="text-indigo-600 font-medium">Rey del Sistema</p>
+            <h2 className="mt-4 text-2xl font-semibold" style={{ color: 'var(--color-text)' }}>Marlon Moncayo</h2>
+            <p className="font-medium" style={{ color: 'var(--color-primary)' }}>Rey del Sistema</p>
           </div>
 
-         
-          <div className="flex flex-col flex-1 space-y-4">
-            <h3 className="text-xl font-semibold">Información del perfil</h3>
-            <hr className="border-gray-200" />
-            <p>
-              <span className="font-semibold">Correo:</span>{" "}
-              marlon@example.com
-            </p>
-            <p>
-              <span className="font-semibold">Teléfono:</span> +57 300 456 7890
-            </p>
-            <p>
-              <span className="font-semibold">Ubicación:</span> Mocoa, Putumayo, Colombia
-            </p>
-            <p>
-              <span className="font-semibold">Miembro desde:</span> Enero 2023
-            </p>
-            <Button className="mt-6 bg-indigo-600 text-white hover:bg-indigo-700 transition">
-              Editar perfil
-            </Button>
+          <div className="flex flex-col md:w-2/3 space-y-4">
+            <h3 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>Información del perfil</h3>
+            <hr style={{ borderColor: 'var(--color-border)' }} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Correo</div>
+                <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>marlon@example.com</div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Teléfono</div>
+                <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>+57 300 456 7890</div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Ubicación</div>
+                <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Mocoa, Putumayo, Colombia</div>
+              </div>
+              <div>
+                <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Miembro desde</div>
+                <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Enero 2023</div>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <Button className="px-4 py-2" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>Editar perfil</Button>
+            </div>
           </div>
         </div>
       </div>
