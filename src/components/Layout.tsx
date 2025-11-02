@@ -10,7 +10,7 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background)', color: 'var(--color-text)' }}>
       <Navbar onToggleSidebar={() => setSidebarOpen((s) => !s)} />
 
       <div className="flex">
