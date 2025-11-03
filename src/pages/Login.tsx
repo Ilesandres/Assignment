@@ -158,13 +158,13 @@ export default function LoginScreen() {
                             style={{ color: 'var(--color-text)' }}
                         >
                             ¿No tienes cuenta?{' '}
-                            <a
-                                href="#"
-                                className="font-semibold hover:underline"
-                                style={{ color: 'var(--color-primary)' }}
-                            >
-                                Regístrate
-                            </a>
+                                <a
+                                    href="/register"
+                                    className="font-semibold hover:underline"
+                                    style={{ color: 'var(--color-primary)' }}
+                                >
+                                    Regístrate
+                                </a>
                         </p>
                     </div>
                 </div>
