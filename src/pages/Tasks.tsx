@@ -26,10 +26,14 @@ export default function Tasks() {
   const [showForm, setShowForm] = useState(true);
   const user = useAppStore((s) => s.user);
   const navigate = useNavigate();
+  const authInitialized = useAppStore((s) => s.authInitialized);
 
   useEffect(() => {
+    if (!authInitialized) return; // wait for firebase to report state
     if (!user) navigate('/login');
   }, [user, navigate]);
+
+  if (!authInitialized) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
 
   function updateStatus(id: string, status: TaskStatus) {
     updateStatusAction(id, status);
