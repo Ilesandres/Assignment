@@ -1,13 +1,31 @@
 import React, { useState } from 'react';
 import { Input, Button } from '../components';
+import { useNavigate } from 'react-router-dom';
+import { loginUser } from 'src/services/authService';
+import useAppStore from 'src/store/useAppStore';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+    const setUser = useAppStore((s) => s.setUser);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Login attempt:', { email, password });
+        setError(null);
+        setLoading(true);
+        try {
+            const user = await loginUser(email.trim(), password);
+            // update local store optimistically; onAuthStateChanged will also sync
+            setUser(user as any);
+            navigate('/dashboard');
+        } catch (err: any) {
+            setError(err?.message ?? 'Error al iniciar sesión');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -123,11 +141,15 @@ export default function LoginScreen() {
                             type="submit"
                             variant="primary"
                             className="w-full"
-                            disabled={!email || !password}
+                            disabled={!email || !password || loading}
                         >
-                            Iniciar sesión
+                            {loading ? 'Validando...' : 'Iniciar sesión'}
                         </Button>
                     </form>
+
+                    {error && (
+                        <div className="mt-4 text-sm text-red-600" role="alert">{error}</div>
+                    )}
 
                     {/* Footer */}
                     <div className="mt-6 text-center">

@@ -1,8 +1,12 @@
 import { create } from 'zustand';
 import type { Task as TaskType, TaskStatus } from 'src/shared';
 import { loadTasks, saveTasks, addTask as svcAddTask, updateTaskStatus as svcUpdateTaskStatus, deleteTask as svcDeleteTask } from 'src/services/taskService';
+import { auth } from 'src/config/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { logoutUser as svcLogoutUser } from 'src/services/authService';
 
 type User = {
+  uid?: string;
   name?: string;
   email?: string;
 } | null;
@@ -11,23 +15,28 @@ type AppState = {
   user: User;
   tasks: TaskType[];
   setUser: (u: User) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   addTask: (t: TaskType) => void;
   updateTaskStatus: (id: string, status: TaskStatus) => void;
   deleteTask: (id: string) => void;
 };
 
 export const useAppStore = create<AppState>((set: any, get: any) => ({
-  // initial demo user so profile shows something; can be null in production
-  user: { name: 'Marlon Moncayo', email: 'marlon@example.com' },
+  // start unauthenticated; onAuthStateChanged will populate when Firebase reports a user
+  user: null,
   tasks: loadTasks(),
 
   setUser(u: User) {
     set({ user: u });
   },
 
-  logout() {
-    set({ user: null });
+  async logout() {
+    try {
+      await svcLogoutUser();
+    } catch (err) {
+      // ignore logout errors but still clear local state
+    }
+    set({ user: null, tasks: [] });
   },
 
   addTask(t: TaskType) {
@@ -54,5 +63,15 @@ export const useAppStore = create<AppState>((set: any, get: any) => ({
     });
   },
 }));
+
+// Listen for Firebase Auth state changes and keep the store in sync.
+onAuthStateChanged(auth, (fbUser) => {
+  if (fbUser) {
+    const u: User = { uid: fbUser.uid, name: fbUser.displayName ?? undefined, email: fbUser.email ?? undefined };
+    useAppStore.getState().setUser(u);
+  } else {
+    useAppStore.getState().setUser(null);
+  }
+});
 
 export default useAppStore;

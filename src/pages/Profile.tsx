@@ -1,10 +1,16 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 import { Button, Layout } from "src/components";
 import useAppStore from 'src/store/useAppStore';
+import { useNavigate } from 'react-router-dom';
 
 const Profile: React.FC = () => {
   const user = useAppStore((s) => s.user);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) navigate('/login');
+  }, [user, navigate]);
 
   return (
     <Layout>
