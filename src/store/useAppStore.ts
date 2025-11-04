@@ -1,12 +1,17 @@
 import { create } from 'zustand';
 import type { Task as TaskType, TaskStatus } from 'src/shared';
-import { loadTasks, saveTasks, addTask as svcAddTask, updateTaskStatus as svcUpdateTaskStatus, deleteTask as svcDeleteTask } from 'src/services/taskService';
-import { auth } from 'src/config/firebase';
-import { onAuthStateChanged, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { logoutUser as svcLogoutUser } from 'src/services/authService';
+import { 
+  fetchUserTasks, 
+  addTask as svcAddTask, 
+  updateTaskStatus as svcUpdateTaskStatus, 
+  deleteTask as svcDeleteTask 
+} from 'src/services/taskService';
+import { auth } from 'src/config/firebase'; 
+import { onAuthStateChanged } from 'firebase/auth'; 
+import type { User as FirebaseAuthUser } from 'firebase/auth';
 
 type User = {
-  uid?: string;
+  uid: string;
   name?: string;
   email?: string;
 } | null;
@@ -14,79 +19,119 @@ type User = {
 type AppState = {
   user: User;
   tasks: TaskType[];
-  authInitialized: boolean;
+  isLoading: boolean;
+  error: string | null;
+  authChecked: boolean;
+
   setUser: (u: User) => void;
-  logout: () => Promise<void>;
-  addTask: (t: TaskType) => void;
-  updateTaskStatus: (id: string, status: TaskStatus) => void;
-  deleteTask: (id: string) => void;
+  logout: () => void;
+  fetchTasks: () => Promise<void>;
+  addTask: (t: Omit<TaskType, 'id'>) => Promise<void>; 
+  updateTaskStatus: (id: string, status: TaskStatus) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
 };
 
-export const useAppStore = create<AppState>((set: any, get: any) => ({
-  user: null,
-  tasks: loadTasks(),
-  authInitialized: false,
+export const useAppStore = create<AppState>((set, get) => ({
+  user: null, 
+  tasks: [],
+  isLoading: false,
+  error: null,
+  authChecked: false,
 
   setUser(u: User) {
-    set({ user: u });
+    set({ user: u, error: null });
   },
 
-  async logout() {
-    try {
-      await svcLogoutUser();
-    } catch (err) {
-      // ignore logout errors but still clear local state
+  logout() {
+    set({ user: null, tasks: [], isLoading: false, error: null });
+    auth.signOut();
+  },
+
+  async fetchTasks() {
+    const { user } = get();
+    if (!user?.uid) {
+        set({ tasks: [], isLoading: false }); 
+        return;
     }
-    set({ user: null, tasks: [] });
+
+    set({ isLoading: true, error: null });
+    try {
+        const fetchedTasks = await fetchUserTasks(user.uid);
+        set({ tasks: fetchedTasks, isLoading: false });
+    } catch (err) {
+        set({ error: 'Error al cargar las tareas. Verifica tu conexión.', isLoading: false });
+        console.error(err);
+    }
   },
 
-  addTask(t: TaskType) {
-    set((state: AppState) => {
-      const next = svcAddTask(state.tasks, t);
-      try { saveTasks(next); } catch (err) { /* ignore */ }
-      return { tasks: next };
-    });
+  async addTask(task: Omit<TaskType, 'id'>) {
+    const { user } = get();
+    if (!user?.uid) return;
+
+    set({ isLoading: true, error: null });
+    try {
+        const newTask = await svcAddTask(user.uid, task);
+        
+        set((state) => ({ 
+            tasks: [newTask, ...state.tasks], 
+            isLoading: false 
+        }));
+    } catch (err) {
+        set({ error: 'Error al agregar la tarea.', isLoading: false });
+        console.error(err);
+    }
   },
 
-  updateTaskStatus(id: string, status: TaskStatus) {
-    set((state: AppState) => {
-      const next = svcUpdateTaskStatus(state.tasks, id, status);
-      try { saveTasks(next); } catch (err) { /* ignore */ }
-      return { tasks: next };
-    });
+  async updateTaskStatus(id: string, status: TaskStatus) {
+    const { user, tasks } = get();
+    if (!user?.uid) return;
+    
+    const originalTasks = tasks;
+    const optimisticTasks = tasks.map((t) => (t.id === id ? { ...t, status } : t));
+    set({ tasks: optimisticTasks, error: null, isLoading: true });
+
+    try {
+        await svcUpdateTaskStatus(user.uid, id, status);
+        set({ isLoading: false }); 
+    } catch (err) {
+        set({ error: 'Error al actualizar el estado de la tarea. Intenta de nuevo.', tasks: originalTasks, isLoading: false });
+        console.error(err);
+    }
   },
 
-  deleteTask(id: string) {
-    set((state: AppState) => {
-      const next = svcDeleteTask(state.tasks, id);
-      try { saveTasks(next); } catch (err) { /* ignore */ }
-      return { tasks: next };
-    });
+  async deleteTask(id: string) {
+    const { user, tasks } = get();
+    if (!user?.uid) return;
+
+    const originalTasks = tasks;
+    const optimisticTasks = tasks.filter((t) => t.id !== id);
+    set({ tasks: optimisticTasks, error: null, isLoading: true });
+
+    try {
+        await svcDeleteTask(user.uid, id);
+        set({ isLoading: false });
+    } catch (err) {
+        set({ error: 'Error al eliminar la tarea. Intenta de nuevo.', tasks: originalTasks, isLoading: false });
+        console.error(err);
+    }
   },
 }));
 
-// Listen for Firebase Auth state changes and keep the store in sync.
-// Ensure auth persistence does NOT store tokens in localStorage. Use in-memory persistence so tokens
-// are not written to storage by the client SDK. Server-side session should be used for persistence.
-// Ensure persistence is set to local so sessions survive reloads in a frontend-only app.
-setPersistence(auth, browserLocalPersistence).catch(() => {
-  // ignore persistence errors (fallback to default)
-});
-
-let first = true;
-onAuthStateChanged(auth, (fbUser) => {
-  if (fbUser) {
-    const u: User = { uid: fbUser.uid, name: fbUser.displayName ?? undefined, email: fbUser.email ?? undefined };
-    useAppStore.getState().setUser(u);
-  } else {
-    useAppStore.getState().setUser(null);
-  }
-
-  // mark initialization after the first callback so UI can avoid flashes
-  if (first) {
-    first = false;
-    useAppStore.setState({ authInitialized: true } as any);
-  }
+onAuthStateChanged(auth, (firebaseUser: FirebaseAuthUser | null) => {
+    const store = useAppStore.getState();
+    
+    if (firebaseUser) {
+        const appUser: User = {
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
+            email: firebaseUser.email || undefined,
+        };
+        store.setUser(appUser);
+        store.fetchTasks();
+    } else {
+        store.logout(); 
+    }
+    useAppStore.setState({ authChecked: true });
 });
 
 export default useAppStore;
