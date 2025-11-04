@@ -58,15 +58,35 @@ export function subscribeToUserTasks(ownerId: string, onUpdate: (tasks: TaskType
     onUpdate(arr as TaskType[]);
   }
 
-  const unsubTop = onSnapshot(qTop, (snap) => {
-    const tasks: Record<string, TaskType> = {};
-    snap.forEach((d) => {
-      const t = normalizeDoc(d);
-      tasks[t.id] = t;
-    });
-    latestTop = tasks;
-    emit();
-  });
+  let unsubTop: (() => void) | null = null;
+  // attach an error handler so permission-denied doesn't become an uncaught error
+  unsubTop = onSnapshot(
+    qTop,
+    (snap) => {
+      const tasks: Record<string, TaskType> = {};
+      snap.forEach((d) => {
+        const t = normalizeDoc(d);
+        tasks[t.id] = t;
+      });
+      latestTop = tasks;
+      emit();
+    },
+    (err: any) => {
+      // If permissions prevent reading top-level tasks, stop that listener and
+      // continue using the legacy per-user subcollection only.
+      try {
+        if (err && err.code === 'permission-denied') {
+          console.warn('[firestoreService] top-level tasks listener permission denied, disabling top-level listener.');
+        } else {
+          console.error('[firestoreService] snapshot error (top-level):', err);
+        }
+      } finally {
+        try { if (unsubTop) unsubTop(); } catch (e) {}
+        latestTop = {};
+        emit();
+      }
+    }
+  );
 
   const unsubSub = onSnapshot(colSub, (snap) => {
     const tasks: Record<string, TaskType> = {};
@@ -97,12 +117,22 @@ export async function getUserTasksOnce(ownerId: string) {
   // gather from top-level tasks with owner
   const colTop = collection(db, 'tasks');
   const qTop = query(colTop, where('owner', '==', ownerId), orderBy('due', 'asc'));
-  const snapTop = await getDocs(qTop);
   const map: Record<string, TaskType> = {};
-  snapTop.forEach((d) => {
-    const t = normalizeDoc(d);
-    map[t.id] = t;
-  });
+  try {
+    const snapTop = await getDocs(qTop);
+    snapTop.forEach((d) => {
+      const t = normalizeDoc(d);
+      map[t.id] = t;
+    });
+  } catch (err: any) {
+    if (err && err.code === 'permission-denied') {
+      // permission denied when reading top-level tasks: ignore and
+      // proceed to try the legacy subcollection
+      console.warn('[firestoreService] getUserTasksOnce: permission-denied for top-level tasks, falling back to users/{uid}/tasks');
+    } else {
+      throw err;
+    }
+  }
 
   // also gather from legacy per-user subcollection
   const colSub = collection(db, 'users', ownerId, 'tasks');
