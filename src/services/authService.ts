@@ -1,11 +1,25 @@
 import { auth } from 'src/config/firebase';
 import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { createUserProfile } from './firestoreService';
+import { createUserProfile, getUserProfile } from './firestoreService';
 
 export async function loginUser(email: string, password: string) {
   try {
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const u = cred.user;
+    
+    // Verificar si el perfil existe en Firestore, si no, crearlo (para usuarios legacy)
+    try {
+      const existingProfile = await getUserProfile(u.uid);
+      if (!existingProfile) {
+        console.log('📝 Usuario legacy detectado, creando perfil en Firestore...');
+        await createUserProfile(u.uid, u.email || email, u.displayName || undefined);
+        console.log('✅ Perfil creado para usuario existente');
+      }
+    } catch (profileError) {
+      console.warn('⚠️ No se pudo verificar/crear el perfil del usuario:', profileError);
+      // No lanzar error, permitir que el login continúe
+    }
+    
     console.log(u);
     return {
       uid: u.uid,

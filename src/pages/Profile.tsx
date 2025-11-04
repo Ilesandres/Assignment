@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 
 import { Button, Layout, Input } from "src/components";
 import useAppStore from 'src/store/useAppStore';
-import { getUserProfile, updateUserProfile, subscribeToUserProfile } from 'src/services/firestoreService';
+import { getUserProfile, updateUserProfile, subscribeToUserProfile, createUserProfile } from 'src/services/firestoreService';
 import type { UserProfile } from 'src/shared';
 
 const Profile: React.FC = () => {
@@ -12,6 +12,7 @@ const Profile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creatingProfile, setCreatingProfile] = useState(false);
   
   // Estados para el formulario de edición
   const [editForm, setEditForm] = useState({
@@ -39,6 +40,22 @@ const Profile: React.FC = () => {
     
     return () => unsubscribe();
   }, [user?.uid]);
+
+  const handleCreateProfile = async () => {
+    if (!user?.uid || !user?.email) return;
+    
+    setCreatingProfile(true);
+    try {
+      await createUserProfile(user.uid, user.email, user.name || undefined);
+      console.log('✅ Perfil creado exitosamente');
+      // El perfil se actualizará automáticamente gracias a la suscripción
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      alert('Error al crear el perfil. Por favor intenta de nuevo.');
+    } finally {
+      setCreatingProfile(false);
+    }
+  };
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -100,9 +117,40 @@ const Profile: React.FC = () => {
   if (!profile) {
     return (
       <Layout>
-        <div className="flex items-center justify-center w-full min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
-          <div className="text-center">
-            <p style={{ color: 'var(--color-error)' }}>No se pudo cargar el perfil</p>
+        <div className="flex items-center justify-center w-full min-h-screen p-8" style={{ backgroundColor: 'var(--color-background)' }}>
+          <div className="text-center max-w-md p-8 rounded-2xl shadow-sm" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+            <div className="mb-6">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-primary)', opacity: 0.1 }}>
+                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--color-primary)' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
+                Perfil no encontrado
+              </h2>
+              <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
+                Parece que eres un usuario registrado antes de la actualización. 
+                Crea tu perfil ahora para acceder a todas las funcionalidades.
+              </p>
+            </div>
+            <Button 
+              onClick={handleCreateProfile}
+              disabled={creatingProfile}
+              className="px-6 py-2 w-full" 
+              style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+            >
+              {creatingProfile ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Creando perfil...
+                </span>
+              ) : (
+                'Crear mi perfil'
+              )}
+            </Button>
+            <p className="text-xs mt-4" style={{ color: 'var(--color-text-muted)' }}>
+              Esto solo se hace una vez y es completamente automático
+            </p>
           </div>
         </div>
       </Layout>
