@@ -18,7 +18,8 @@ export default function LoginScreen() {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            navigate('/task', { replace: true }); 
+            // 🎯 CAMBIO AQUÍ: Redirigir a la ruta raíz que ahora es Inicio
+            navigate('/', { replace: true }); 
         } catch (error: any) {
             console.error('Login error:', error);
             let errorMessage = 'Error al iniciar sesión. Verifica tus credenciales.';
@@ -49,6 +50,7 @@ export default function LoginScreen() {
                     }}
                 >
 
+                    {/* Header */}
                     <div className="text-center mb-8">
                         <div className="flex justify-center mb-6">
                             <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 transform rotate-3">
@@ -78,6 +80,7 @@ export default function LoginScreen() {
                     )}
 
 
+                    {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <Input
                             id="email"
@@ -157,6 +160,7 @@ export default function LoginScreen() {
                         </Button>
                     </form>
 
+                    {/* Footer */}
                     <div className="mt-6 text-center">
                         <p
                             className="text-sm"
