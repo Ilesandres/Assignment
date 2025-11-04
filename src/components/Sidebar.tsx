@@ -11,7 +11,6 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
   const handleTasksClick = () => {
     navigate('/task');
-    // Cerrar sidebar en móvil después de navegar
     if (onClose) {
       onClose();
     }
@@ -42,7 +41,13 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
         <nav className="p-4 flex-1 overflow-y-auto">
           <ul className="space-y-2">
             <li>
-              <button onClick={() => { navigate('/'); if (onClose) onClose(); }} className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" style={{ color: 'var(--color-text)' }}>Inicio</button>
+              <button 
+                onClick={() => { navigate('/dashboard'); if (onClose) onClose(); }}
+                className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" 
+                style={{ color: 'var(--color-text)' }}
+              >
+                Dashboard
+              </button>
             </li>
             <li>
               <button 

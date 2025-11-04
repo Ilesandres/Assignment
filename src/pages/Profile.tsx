@@ -1,20 +1,11 @@
-import React, { useEffect } from "react";
+import React from "react";
 
 import { Button, Layout } from "src/components";
 import useAppStore from 'src/store/useAppStore';
-import { useNavigate } from 'react-router-dom';
 
 const Profile: React.FC = () => {
+  // Obtenemos el usuario del store. Siempre será válido gracias a <AuthGuard>.
   const user = useAppStore((s) => s.user);
-  const navigate = useNavigate();
-  const authInitialized = useAppStore((s) => s.authInitialized);
-
-  useEffect(() => {
-    if (!authInitialized) return;
-    if (!user) navigate('/login');
-  }, [user, navigate]);
-
-  if (!authInitialized) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
 
   return (
     <Layout>
@@ -41,7 +32,7 @@ const Profile: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Correo</div>
-                <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>marlon@example.com</div>
+                <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{user?.email ?? 'marlon@example.com'}</div>
               </div>
               <div>
                 <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Teléfono</div>
