@@ -1,8 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Card, Layout } from "src/components";
+import useAppStore from 'src/store/useAppStore';
+import { useNavigate } from 'react-router-dom';
 
 
 const Dashboard: React.FC = () => {
+  const user = useAppStore((s) => s.user);
+  const navigate = useNavigate();
+  const authInitialized = useAppStore((s) => s.authInitialized);
+
+  useEffect(() => {
+    if (!authInitialized) return;
+    if (!user) navigate('/login');
+  }, [user, navigate]);
+
+  if (!authInitialized) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
+
   // Placeholder metrics (will be replaced when connected to backend)
   const total = 231;
   const waiting = 34;

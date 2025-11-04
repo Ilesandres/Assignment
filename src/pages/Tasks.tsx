@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Button, Navbar, Input } from '../components';
 import type { Task as TaskType, TaskStatus } from 'src/shared';
 import { statusColumnBg, statusPillClass } from 'src/shared/ui';
 import { groupByStatus } from 'src/services/taskService';
 import useAppStore from 'src/store/useAppStore';
+import { useNavigate } from 'react-router-dom';
 
 const statusLabels: Record<TaskStatus, string> = {
   'waiting': 'En espera',
@@ -23,6 +24,16 @@ export default function Tasks() {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [showForm, setShowForm] = useState(true);
+  const user = useAppStore((s) => s.user);
+  const navigate = useNavigate();
+  const authInitialized = useAppStore((s) => s.authInitialized);
+
+  useEffect(() => {
+    if (!authInitialized) return; // wait for firebase to report state
+    if (!user) navigate('/login');
+  }, [user, navigate]);
+
+  if (!authInitialized) return <div className="min-h-screen flex items-center justify-center">Cargando...</div>;
 
   function updateStatus(id: string, status: TaskStatus) {
     updateStatusAction(id, status);
