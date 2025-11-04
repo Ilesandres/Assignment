@@ -22,7 +22,7 @@ export default function Tasks() {
   const [statusSel, setStatusSel] = useState<TaskStatus>('waiting');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
-  const [showForm, setShowForm] = useState(true);
+  const [showForm, setShowForm] = useState(false);
 
   function updateStatus(id: string, status: TaskStatus) {
     updateStatusAction(id, status);
