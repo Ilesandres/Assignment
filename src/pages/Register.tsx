@@ -1,34 +1,49 @@
 import React, { useState } from 'react';
 import { Input, Button } from '../components';
-import { auth } from 'src/config/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { registerUser } from '../services/authService';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loginError, setLoginError] = useState<string | null>(null);
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [displayName, setDisplayName] = useState('');
+    const [registerError, setRegisterError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoginError(null);
+        setRegisterError(null);
+
+        // Validaciones
+        if (password !== confirmPassword) {
+            setRegisterError('Las contraseñas no coinciden.');
+            return;
+        }
+
+        if (password.length < 6) {
+            setRegisterError('La contraseña debe tener al menos 6 caracteres.');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            // 🎯 CAMBIO AQUÍ: Redirigir a la ruta raíz que ahora es Inicio
-            navigate('/', { replace: true }); 
+            await registerUser(email, password, displayName);
+            // Redirigir al inicio después del registro exitoso
+            navigate('/', { replace: true });
         } catch (error: any) {
-            console.error('Login error:', error);
-            let errorMessage = 'Error al iniciar sesión. Verifica tus credenciales.';
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                errorMessage = 'Correo o contraseña incorrectos.';
+            console.error('Register error:', error);
+            let errorMessage = 'Error al registrar. Intenta nuevamente.';
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = 'Este correo ya está registrado.';
             } else if (error.code === 'auth/invalid-email') {
                 errorMessage = 'El formato del correo electrónico es inválido.';
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = 'La contraseña es muy débil.';
             }
-            setLoginError(errorMessage);
+            setRegisterError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }

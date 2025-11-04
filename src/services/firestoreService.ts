@@ -11,8 +11,10 @@ import {
   doc,
   serverTimestamp,
   getDocs,
+  setDoc,
+  getDoc,
 } from 'firebase/firestore';
-import type { Task as TaskType } from 'src/shared';
+import type { Task as TaskType, UserProfile } from 'src/shared';
 
 // Top-level tasks collection with owner field. All exported functions
 // filter by ownerId and normalize Firestore timestamps to ISO strings.
@@ -188,10 +190,110 @@ export async function deleteTaskFirestore(id: string) {
   await deleteDoc(ref);
 }
 
+// ============ USER PROFILE FUNCTIONS ============
+
+export async function createUserProfile(uid: string, email: string, displayName?: string): Promise<void> {
+  const profileRef = doc(db, 'userProfiles', uid);
+  const timestamp = serverTimestamp();
+  
+  const profile: Partial<UserProfile> = {
+    uid,
+    email,
+    displayName: displayName || null,
+    photoURL: `https://i.pravatar.cc/150?u=${uid}`, // URL de avatar automática basada en UID
+    phone: null,
+    location: null,
+    memberSince: new Date().toISOString(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  
+  await setDoc(profileRef, profile);
+}
+
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  try {
+    const profileRef = doc(db, 'userProfiles', uid);
+    const profileSnap = await getDoc(profileRef);
+    
+    if (!profileSnap.exists()) {
+      return null;
+    }
+    
+    const data = profileSnap.data();
+    return {
+      uid: data.uid,
+      email: data.email,
+      displayName: data.displayName,
+      photoURL: data.photoURL,
+      phone: data.phone,
+      location: data.location,
+      memberSince: data.memberSince,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    } as UserProfile;
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    return null;
+  }
+}
+
+export async function updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<void> {
+  const profileRef = doc(db, 'userProfiles', uid);
+  const payload = { ...updates, updatedAt: serverTimestamp() };
+  
+  // Eliminar campos que no deben ser actualizables
+  delete (payload as any).uid;
+  delete (payload as any).createdAt;
+  delete (payload as any).photoURL; // La foto no se edita
+  
+  await updateDoc(profileRef, payload);
+}
+
+export function subscribeToUserProfile(uid: string, onUpdate: (profile: UserProfile | null) => void): () => void {
+  if (!uid) return () => {};
+  
+  const profileRef = doc(db, 'userProfiles', uid);
+  
+  const unsubscribe = onSnapshot(
+    profileRef,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        onUpdate(null);
+        return;
+      }
+      
+      const data = snapshot.data();
+      const profile: UserProfile = {
+        uid: data.uid,
+        email: data.email,
+        displayName: data.displayName,
+        photoURL: data.photoURL,
+        phone: data.phone,
+        location: data.location,
+        memberSince: data.memberSince,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      };
+      onUpdate(profile);
+    },
+    (error) => {
+      console.error('Error subscribing to user profile:', error);
+      onUpdate(null);
+    }
+  );
+  
+  return unsubscribe;
+}
+
 export default {
   subscribeToUserTasks,
   getUserTasksOnce,
   addTaskFirestore,
   updateTaskFirestore,
   deleteTaskFirestore,
+  createUserProfile,
+  getUserProfile,
+  updateUserProfile,
+  subscribeToUserProfile,
 };

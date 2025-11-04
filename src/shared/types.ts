@@ -28,3 +28,15 @@ export type Task = {
     status: TaskStatus;
     owner?: string;
 };
+
+export type UserProfile = {
+    uid: string;
+    email: string;
+    displayName: string | null;
+    photoURL: string;
+    phone: string | null;
+    location: string | null;
+    memberSince: string; // ISO date string
+    createdAt?: any; // Firestore timestamp
+    updatedAt?: any; // Firestore timestamp
+};
