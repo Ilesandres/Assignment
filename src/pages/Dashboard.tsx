@@ -5,14 +5,22 @@ import { Card, Layout } from "src/components";
 import useAppStore from 'src/store/useAppStore'; // 👈 Importamos el store
 
 const Dashboard: React.FC = () => {
-  // Placeholder metrics (serán reemplazadas con datos reales después)
-  const total = 231;
-  const waiting = 34;
-  const inProgress = 89;
-  const completedPct = 67;
-  const overdue = 12;
-  const upcoming = 27;
-  const user = useAppStore((s) => s.user); // 👈 Obtenemos el usuario autenticado
+  const tasks = useAppStore((s) => s.tasks || []);
+  const user = useAppStore((s) => s.user);
+
+  const total = tasks.length;
+  const waiting = tasks.filter((t) => t.status === 'waiting').length;
+  const inProgress = tasks.filter((t) => t.status === 'in-progress').length;
+  const completed = tasks.filter((t) => t.status === 'completed').length;
+  const completedPct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const now = Date.now();
+  const overdue = tasks.filter((t) => t.due && new Date(t.due).getTime() < now && t.status !== 'completed').length;
+  const upcoming = tasks.filter((t) => {
+    if (!t.due) return false;
+    const due = new Date(t.due).getTime();
+    const in7 = now + 7 * 24 * 60 * 60 * 1000;
+    return due > now && due <= in7;
+  }).length;
 
   return (
     <Layout>

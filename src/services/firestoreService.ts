@@ -14,40 +14,134 @@ import {
 } from 'firebase/firestore';
 import type { Task as TaskType } from 'src/shared';
 
-// Subscribe to tasks for a given owner (real-time). Returns unsubscribe function.
+// Top-level tasks collection with owner field. All exported functions
+// filter by ownerId and normalize Firestore timestamps to ISO strings.
+
+function normalizeDoc(d: any): TaskType {
+  const data = d.data ? d.data() : d;
+  const raw = d.data ? d.data() : data;
+  const due = raw.due
+    ? raw.due.seconds
+      ? new Date(raw.due.seconds * 1000).toISOString()
+      : String(raw.due)
+    : undefined;
+  return {
+    id: d.id,
+    title: raw.title || '',
+    description: raw.description || '',
+    status: raw.status || 'waiting',
+    due,
+    owner: raw.owner,
+  } as TaskType;
+}
+
 export function subscribeToUserTasks(ownerId: string, onUpdate: (tasks: TaskType[]) => void) {
   if (!ownerId) return () => {};
-  const col = collection(db, 'tasks');
-  const q = query(col, where('owner', '==', ownerId), orderBy('due', 'asc'));
-  const unsub = onSnapshot(q, (snap) => {
-    const tasks: TaskType[] = [];
-    snap.forEach((d) => {
-      const data = d.data() as any;
-      tasks.push({ id: d.id, title: data.title || '', description: data.description || '', status: data.status || 'waiting', due: data.due ? (data.due.seconds ? new Date(data.due.seconds * 1000).toISOString() : String(data.due)) : undefined, owner: data.owner });
+  // Listen to two possible locations:
+  // 1) top-level `tasks` collection where documents have `owner` field
+  // 2) legacy per-user subcollection `users/{uid}/tasks`
+  const colTop = collection(db, 'tasks');
+  const qTop = query(colTop, where('owner', '==', ownerId), orderBy('due', 'asc'));
+
+  const colSub = collection(db, 'users', ownerId, 'tasks');
+
+  let latestTop: Record<string, TaskType> = {};
+  let latestSub: Record<string, TaskType> = {};
+
+  function emit() {
+    const merged = { ...latestTop, ...latestSub };
+    const arr = Object.values(merged).sort((a, b) => {
+      const da = a.due ? new Date(a.due).getTime() : 0;
+      const dbt = b.due ? new Date(b.due).getTime() : 0;
+      return da - dbt;
     });
-    onUpdate(tasks);
+    onUpdate(arr as TaskType[]);
+  }
+
+  const unsubTop = onSnapshot(qTop, (snap) => {
+    const tasks: Record<string, TaskType> = {};
+    snap.forEach((d) => {
+      const t = normalizeDoc(d);
+      tasks[t.id] = t;
+    });
+    latestTop = tasks;
+    emit();
   });
-  return unsub;
+
+  const unsubSub = onSnapshot(colSub, (snap) => {
+    const tasks: Record<string, TaskType> = {};
+    snap.forEach((d) => {
+      const data = d.data();
+      const due = data.due ? (data.due.seconds ? new Date(data.due.seconds * 1000).toISOString() : String(data.due)) : undefined;
+      tasks[d.id] = {
+        id: d.id,
+        title: data.title || '',
+        description: data.description || '',
+        status: data.status || 'waiting',
+        due,
+        owner: ownerId,
+      } as TaskType;
+    });
+    latestSub = tasks;
+    emit();
+  });
+
+  return () => {
+    try { unsubTop(); } catch (e) {}
+    try { unsubSub(); } catch (e) {}
+  };
 }
 
 export async function getUserTasksOnce(ownerId: string) {
   if (!ownerId) return [] as TaskType[];
-  const col = collection(db, 'tasks');
-  const q = query(col, where('owner', '==', ownerId), orderBy('due', 'asc'));
-  const snap = await getDocs(q);
-  const tasks: TaskType[] = [];
-  snap.forEach((d) => {
-    const data = d.data() as any;
-    tasks.push({ id: d.id, title: data.title || '', description: data.description || '', status: data.status || 'waiting', due: data.due ? (data.due.seconds ? new Date(data.due.seconds * 1000).toISOString() : String(data.due)) : undefined, owner: data.owner });
+  // gather from top-level tasks with owner
+  const colTop = collection(db, 'tasks');
+  const qTop = query(colTop, where('owner', '==', ownerId), orderBy('due', 'asc'));
+  const snapTop = await getDocs(qTop);
+  const map: Record<string, TaskType> = {};
+  snapTop.forEach((d) => {
+    const t = normalizeDoc(d);
+    map[t.id] = t;
   });
-  return tasks;
+
+  // also gather from legacy per-user subcollection
+  const colSub = collection(db, 'users', ownerId, 'tasks');
+  try {
+    const snapSub = await getDocs(colSub);
+    snapSub.forEach((d) => {
+      const data = d.data() as any;
+      const due = data.due ? (data.due.seconds ? new Date(data.due.seconds * 1000).toISOString() : String(data.due)) : undefined;
+      map[d.id] = {
+        id: d.id,
+        title: data.title || '',
+        description: data.description || '',
+        status: data.status || 'waiting',
+        due,
+        owner: ownerId,
+      } as TaskType;
+    });
+  } catch (e) {
+    // ignore if subcollection doesn't exist or permission denied
+  }
+
+  const list = Object.values(map).sort((a, b) => {
+    const da = a.due ? new Date(a.due).getTime() : 0;
+    const dbt = b.due ? new Date(b.due).getTime() : 0;
+    return da - dbt;
+  });
+  return list;
 }
 
-export async function addTaskFirestore(task: TaskType) {
+export async function addTaskFirestore(task: Partial<TaskType> & { owner: string }) {
   const col = collection(db, 'tasks');
-  const payload = { ...task, createdAt: serverTimestamp() } as any;
-  // remove id if present
-  if (payload.id) delete payload.id;
+  const payload: any = {
+    title: task.title || '',
+    description: task.description || '',
+    status: task.status || 'waiting',
+    due: task.due ?? null,
+    owner: task.owner,
+    createdAt: serverTimestamp(),
+  };
   const ref = await addDoc(col, payload);
   return ref.id;
 }
@@ -55,7 +149,6 @@ export async function addTaskFirestore(task: TaskType) {
 export async function updateTaskFirestore(id: string, patch: Partial<TaskType>) {
   const ref = doc(db, 'tasks', id);
   const payload = { ...patch } as any;
-  // don't set id
   if (payload.id) delete payload.id;
   await updateDoc(ref, payload);
 }
