@@ -167,13 +167,14 @@ export default function LoginScreen() {
                             style={{ color: 'var(--color-text)' }}
                         >
                             ¿No tienes cuenta?{' '}
-                            <a
-                                href="/register"
-                                className="font-semibold hover:underline"
+                            <button
+                                onClick={() => navigate('/register')}
+                                className="font-semibold hover:underline bg-transparent border-none cursor-pointer"
                                 style={{ color: 'var(--color-primary)' }}
+                                type="button"
                             >
                                 Regístrate
-                            </a>
+                            </button>
                         </p>
                     </div>
                 </div>

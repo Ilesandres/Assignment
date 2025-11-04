@@ -1,10 +1,25 @@
 import { auth } from 'src/config/firebase';
 import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserProfile, getUserProfile } from './firestoreService';
 
 export async function loginUser(email: string, password: string) {
   try {
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const u = cred.user;
+    
+    // Verificar si el perfil existe en Firestore, si no, crearlo (para usuarios legacy)
+    try {
+      const existingProfile = await getUserProfile(u.uid);
+      if (!existingProfile) {
+        console.log('📝 Usuario legacy detectado, creando perfil en Firestore...');
+        await createUserProfile(u.uid, u.email || email, u.displayName || undefined);
+        console.log('✅ Perfil creado para usuario existente');
+      }
+    } catch (profileError) {
+      console.warn('⚠️ No se pudo verificar/crear el perfil del usuario:', profileError);
+      // No lanzar error, permitir que el login continúe
+    }
+    
     console.log(u);
     return {
       uid: u.uid,
@@ -20,13 +35,25 @@ export async function registerUser(email: string, password: string, displayName?
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     const u = cred.user;
+    
+    // Actualizar el perfil de Firebase Auth con el displayName
     if (displayName) {
       try {
         await updateProfile(u, { displayName });
       } catch (e) {
-        // non-fatal: profile update failed
+        console.warn('Profile update failed:', e);
       }
     }
+    
+    // Crear el perfil en Firestore automáticamente
+    try {
+      await createUserProfile(u.uid, email, displayName);
+      console.log('✅ User profile created in Firestore');
+    } catch (e) {
+      console.error('❌ Error creating user profile in Firestore:', e);
+      // No lanzar error, el usuario ya fue creado en Auth
+    }
+    
     return {
       uid: u.uid,
       name: u.displayName ?? displayName ?? undefined,

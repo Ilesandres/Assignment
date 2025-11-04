@@ -1,34 +1,49 @@
 import React, { useState } from 'react';
 import { Input, Button } from '../components';
-import { auth } from 'src/config/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { registerUser } from '../services/authService';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [loginError, setLoginError] = useState<string | null>(null);
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [displayName, setDisplayName] = useState('');
+    const [registerError, setRegisterError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoginError(null);
+        setRegisterError(null);
+
+        // Validaciones
+        if (password !== confirmPassword) {
+            setRegisterError('Las contraseñas no coinciden.');
+            return;
+        }
+
+        if (password.length < 6) {
+            setRegisterError('La contraseña debe tener al menos 6 caracteres.');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            // 🎯 CAMBIO AQUÍ: Redirigir a la ruta raíz que ahora es Inicio
-            navigate('/', { replace: true }); 
+            await registerUser(email, password, displayName);
+            // Redirigir al inicio después del registro exitoso
+            navigate('/', { replace: true });
         } catch (error: any) {
-            console.error('Login error:', error);
-            let errorMessage = 'Error al iniciar sesión. Verifica tus credenciales.';
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                errorMessage = 'Correo o contraseña incorrectos.';
+            console.error('Register error:', error);
+            let errorMessage = 'Error al registrar. Intenta nuevamente.';
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = 'Este correo ya está registrado.';
             } else if (error.code === 'auth/invalid-email') {
                 errorMessage = 'El formato del correo electrónico es inválido.';
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = 'La contraseña es muy débil.';
             }
-            setLoginError(errorMessage);
+            setRegisterError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -55,7 +70,7 @@ export default function LoginScreen() {
                         <div className="flex justify-center mb-6">
                             <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30 transform rotate-3">
                                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                                 </svg>
                             </div>
                         </div>
@@ -63,25 +78,44 @@ export default function LoginScreen() {
                             className="text-2xl font-bold mb-1"
                             style={{ color: 'var(--color-text)' }}
                         >
-                            Iniciar sesión
+                            Crear cuenta
                         </h1>
                         <p
                             className="text-sm"
                             style={{ color: 'var(--color-text-muted)' }}
                         >
-                            Ingresa tus credenciales para continuar
+                            Regístrate para comenzar
                         </p>
                     </div>
 
-                    {loginError && (
+                    {registerError && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                            <span className="block sm:inline">{loginError}</span>
+                            <span className="block sm:inline">{registerError}</span>
                         </div>
                     )}
 
-
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        <Input
+                            id="displayName"
+                            label="Nombre completo"
+                            type="text"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            placeholder="Tu nombre"
+                            icon={
+                                <svg
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    style={{ color: 'var(--color-text-muted)' }}
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                            }
+                        />
+
                         <Input
                             id="email"
                             label="Correo electrónico"
@@ -124,39 +158,34 @@ export default function LoginScreen() {
                             }
                         />
 
-                        <div className="flex items-center justify-between text-sm">
-                            <label className="flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    className="w-4 h-4 rounded focus:ring-2"
-                                    style={{
-                                        accentColor: 'var(--color-primary)',
-                                        borderColor: 'var(--color-border)'
-                                    }}
-                                />
-                                <span
-                                    className="ml-2"
-                                    style={{ color: 'var(--color-text)' }}
+                        <Input
+                            id="confirmPassword"
+                            label="Confirmar contraseña"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="••••••••"
+                            required
+                            icon={
+                                <svg
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    style={{ color: 'var(--color-text-muted)' }}
                                 >
-                                    Recordarme
-                                </span>
-                            </label>
-                            <a
-                                href="#"
-                                className="font-medium hover:underline"
-                                style={{ color: 'var(--color-primary)' }}
-                            >
-                                ¿Olvidaste tu contraseña?
-                            </a>
-                        </div>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            }
+                        />
 
                         <Button
                             type="submit"
                             variant="primary"
                             className="w-full"
-                            disabled={!email || !password || isSubmitting}
+                            disabled={!email || !password || !confirmPassword || isSubmitting}
                         >
-                            {isSubmitting ? 'Iniciando...' : 'Iniciar sesión'}
+                            {isSubmitting ? 'Registrando...' : 'Crear cuenta'}
                         </Button>
                     </form>
 
@@ -166,14 +195,15 @@ export default function LoginScreen() {
                             className="text-sm"
                             style={{ color: 'var(--color-text)' }}
                         >
-                            ¿No tienes cuenta?{' '}
-                            <a
-                                href="/register"
-                                className="font-semibold hover:underline"
+                            ¿Ya tienes cuenta?{' '}
+                            <button
+                                onClick={() => navigate('/login')}
+                                className="font-semibold hover:underline bg-transparent border-none cursor-pointer"
                                 style={{ color: 'var(--color-primary)' }}
+                                type="button"
                             >
-                                Regístrate
-                            </a>
+                                Inicia sesión
+                            </button>
                         </p>
                     </div>
                 </div>

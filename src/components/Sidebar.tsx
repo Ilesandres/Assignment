@@ -50,7 +50,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             <li>
               <button 
                 onClick={() => handleNavigation('/')}
-                className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" 
+                className="nav block w-full text-left px-3 py-2 rounded-md transition-colors" 
                 style={{ color: 'var(--color-text)' }}
               >
                 Inicio
@@ -59,7 +59,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             <li>
               <button 
                 onClick={() => handleNavigation('/dashboard')}
-                className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" 
+                className="nav block w-full text-left px-3 py-2 rounded-md transition-colors" 
                 style={{ color: 'var(--color-text)' }}
               >
                 Dashboard
@@ -68,17 +68,17 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             <li>
               <button 
                 onClick={handleTasksClick}
-                className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50 cursor-pointer"
+                className="nav block w-full text-left px-3 py-2 rounded-md transition-colors cursor-pointer"
                 style={{ color: 'var(--color-text)' }}
               >
                 Tareas
               </button>
             </li>
             <li>
-              <button onClick={() => handleNavigation('/projects')} className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" style={{ color: 'var(--color-text)' }}>Proyectos</button>
+              <button onClick={() => handleNavigation('/projects')} className="nav block w-full text-left px-3 py-2 rounded-md transition-colors" style={{ color: 'var(--color-text)' }}>Proyectos</button>
             </li>
             <li>
-              <button onClick={() => handleNavigation('/settings')} className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" style={{ color: 'var(--color-text)' }}>Ajustes</button>
+              <button onClick={() => handleNavigation('/settings')} className="nav block w-full text-left px-3 py-2 rounded-md transition-colors" style={{ color: 'var(--color-text)' }}>Ajustes</button>
             </li>
           </ul>
         </nav>
