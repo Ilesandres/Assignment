@@ -16,6 +16,13 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     }
   };
 
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    if (onClose) {
+        onClose();
+    }
+  };
+
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-20 w-64 transform shadow-lg transition-transform duration-200 ease-in-out
@@ -42,7 +49,16 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           <ul className="space-y-2">
             <li>
               <button 
-                onClick={() => { navigate('/dashboard'); if (onClose) onClose(); }}
+                onClick={() => handleNavigation('/')}
+                className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" 
+                style={{ color: 'var(--color-text)' }}
+              >
+                Inicio
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => handleNavigation('/dashboard')}
                 className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" 
                 style={{ color: 'var(--color-text)' }}
               >
@@ -59,10 +75,10 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
               </button>
             </li>
             <li>
-              <button onClick={() => { navigate('/projects'); if (onClose) onClose(); }} className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" style={{ color: 'var(--color-text)' }}>Proyectos</button>
+              <button onClick={() => handleNavigation('/projects')} className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" style={{ color: 'var(--color-text)' }}>Proyectos</button>
             </li>
             <li>
-              <button onClick={() => { navigate('/settings'); if (onClose) onClose(); }} className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" style={{ color: 'var(--color-text)' }}>Ajustes</button>
+              <button onClick={() => handleNavigation('/settings')} className="block w-full text-left px-3 py-2 rounded-md hover:bg-gray-50" style={{ color: 'var(--color-text)' }}>Ajustes</button>
             </li>
           </ul>
         </nav>

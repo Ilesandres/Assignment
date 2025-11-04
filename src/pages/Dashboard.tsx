@@ -1,16 +1,18 @@
+// src/pages/Dashboard.tsx
+
 import React from "react";
 import { Card, Layout } from "src/components";
-import useAppStore from 'src/store/useAppStore';
-
+import useAppStore from 'src/store/useAppStore'; // 👈 Importamos el store
 
 const Dashboard: React.FC = () => {
+  // Placeholder metrics (serán reemplazadas con datos reales después)
   const total = 231;
   const waiting = 34;
   const inProgress = 89;
   const completedPct = 67;
   const overdue = 12;
   const upcoming = 27;
-  const user = useAppStore((s) => s.user);
+  const user = useAppStore((s) => s.user); // 👈 Obtenemos el usuario autenticado
 
   return (
     <Layout>
@@ -20,11 +22,6 @@ const Dashboard: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold" style={{ color: 'var(--color-text)' }}>Dashboard — Gestión de tareas</h1>
             <p className="mt-1" style={{ color: 'var(--color-text-muted)' }}>Resumen general del sistema</p>
-          </div>
-          <div className="mt-4 sm:mt-0">
-            <span className="text-sm" style={{ color: 'var(--color-text)' }}>
-              Bienvenido, <strong>{user?.name ?? 'Administrador'}</strong>
-            </span>
           </div>
         </header>
 
