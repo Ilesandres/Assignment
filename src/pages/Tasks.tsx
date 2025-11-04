@@ -22,26 +22,27 @@ export default function Tasks() {
   const [statusSel, setStatusSel] = useState<TaskStatus>('waiting');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
-  const [showForm, setShowForm] = useState(true);
+  const [showForm, setShowForm] = useState(false);
 
   function updateStatus(id: string, status: TaskStatus) {
     updateStatusAction(id, status);
   }
 
-  function addTask(e?: React.FormEvent) {
+  async function addTask(e?: React.FormEvent) {
     if (e) e.preventDefault();
     if (!title.trim()) return;
 
     const due = date ? (time ? `${date} ${time}` : date) : undefined;
-    const newTask: TaskType = {
-      id: `t${Date.now()}`,
+    
+    const newTask: Omit<TaskType, 'id'> = {
       title: title.trim(),
       description: description.trim(),
       due: due,
       status: statusSel,
     };
 
-  addTaskAction(newTask);
+    await addTaskAction(newTask);
+
     setTitle('');
     setDescription('');
     setDate('');
@@ -65,7 +66,6 @@ export default function Tasks() {
           <p className="text-sm var(--color-text)">Tablero simple (simulado).</p>
         </header>
 
-        {/* Header + toggle for the form */}
         <div className="mb-2 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-medium">Agregar tarea</h2>
@@ -80,14 +80,12 @@ export default function Tasks() {
               title={showForm ? 'Ocultar formulario' : 'Mostrar formulario'}
             >
               {showForm ? (
-                // Up arrow (collapse)
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                   <path d="M5 3h14"></path>
                   <path d="m18 13-6-6-6 6"></path>
                   <path d="M12 7v14"></path>
                 </svg>
               ) : (
-                // Down arrow (expand)
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
                   <path d="M12 17V3"></path>
                   <path d="m6 11 6 6 6-6"></path>
@@ -98,7 +96,6 @@ export default function Tasks() {
           </div>
         </div>
 
-        {/* Form to add a new task (collapsible) */}
         {showForm && (
           <form onSubmit={addTask} className="mb-6 grid grid-cols-1 lg:grid-cols-4 gap-3 items-end">
           <div className="lg:col-span-2">
@@ -179,7 +176,6 @@ export default function Tasks() {
                               </div>
 
                               <div className="flex flex-wrap items-center gap-3">
-                                {/* Buttons to move between states (simple) */}
                                 {task.status !== 'waiting' && (
                                   <Button variant="secondary" className="text-xs px-3 py-2 rounded-md" onClick={() => updateStatus(task.id, 'waiting')}>
                                     Espera

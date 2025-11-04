@@ -1,41 +1,84 @@
+import { db } from 'src/config/firebase';
 import type { Task as TaskType, TaskStatus } from 'src/shared';
-import { initialTasks } from 'src/shared/data';
+import {
+  collection,
+  query,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  QueryDocumentSnapshot,
+} from 'firebase/firestore';
 
-const STORAGE_KEY = 'app_tasks_v1';
+const getTasksCollection = (uid: string) => {
+  return collection(db, 'users', uid, 'tasks');
+};
 
-export function loadTasks(): TaskType[] {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-    return initialTasks;
-  }
+const snapshotToTask = (doc: QueryDocumentSnapshot): TaskType => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        title: data.title,
+        description: data.description,
+        due: data.due,
+        status: data.status,
+    } as TaskType;
+};
 
+export async function fetchUserTasks(uid: string): Promise<TaskType[]> {
+  if (!uid) return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as TaskType[];
-  } catch (err) {
+    const tasksQuery = query(getTasksCollection(uid));
+    const snapshot = await getDocs(tasksQuery);
+    
+    return snapshot.docs.map(snapshotToTask);
+  } catch (error) {
+    console.error("Error al obtener tareas:", error);
+    throw new Error('No se pudieron cargar las tareas.');
   }
-
-  return initialTasks;
 }
 
-export function saveTasks(tasks: TaskType[]) {
-  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return;
-
+export async function addTask(uid: string, task: Omit<TaskType, 'id'>): Promise<TaskType> {
+  if (!uid) throw new Error('Se requiere ID de usuario.');
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-  } catch (err) {
+    const taskData = {
+        ...task,
+        createdAt: serverTimestamp(),
+    };
+    const docRef = await addDoc(getTasksCollection(uid), taskData);
+    
+    return { ...task, id: docRef.id };
+  } catch (error) {
+    console.error("Error al agregar tarea:", error);
+    throw new Error('No se pudo agregar la tarea.');
   }
 }
 
-export function addTask(tasks: TaskType[], task: TaskType): TaskType[] {
-  return [task, ...tasks];
+export async function updateTaskStatus(uid: string, taskId: string, status: TaskStatus): Promise<void> {
+  if (!uid) throw new Error('Se requiere ID de usuario.');
+  try {
+    const taskRef = doc(db, 'users', uid, 'tasks', taskId);
+    await updateDoc(taskRef, {
+      status,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error al actualizar estado:", error);
+    throw new Error('No se pudo actualizar el estado de la tarea.');
+  }
 }
 
-export function updateTaskStatus(tasks: TaskType[], id: string, status: TaskStatus): TaskType[] {
-  return tasks.map((t) => (t.id === id ? { ...t, status } : t));
-}
-
-export function deleteTask(tasks: TaskType[], id: string): TaskType[] {
-  return tasks.filter((t) => t.id !== id);
+export async function deleteTask(uid: string, taskId: string): Promise<void> {
+  if (!uid) throw new Error('Se requiere ID de usuario.');
+  try {
+    const taskRef = doc(db, 'users', uid, 'tasks', taskId);
+    await deleteDoc(taskRef);
+  } catch (error) {
+    console.error("Error al eliminar tarea:", error);
+    throw new Error('No se pudo eliminar la tarea.');
+  }
 }
 
 export function groupByStatus(tasks: TaskType[]): Record<TaskStatus, TaskType[]> {
@@ -51,8 +94,7 @@ export function groupByStatus(tasks: TaskType[]): Record<TaskStatus, TaskType[]>
 }
 
 export default {
-  loadTasks,
-  saveTasks,
+  fetchUserTasks,
   addTask,
   updateTaskStatus,
   deleteTask,

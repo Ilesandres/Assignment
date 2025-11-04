@@ -1,13 +1,18 @@
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
+import HomeScreen from "src/pages/Home";
+import AuthGuard from "src/components/AuthGuard";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "Task Manager - Inicio" },
+    { name: "description", content: "Página principal del usuario." },
   ];
 }
 
-export default function Home() {
-  return <Welcome />;
+export default function HomeRoute() {
+  return (
+    <AuthGuard>
+      <HomeScreen />
+    </AuthGuard>
+  );
 }
