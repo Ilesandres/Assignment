@@ -16,7 +16,8 @@ export default function Layout({ children }: LayoutProps) {
       <div className="flex">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        <div className="flex-1 md:ml-64">
+
+        <div className="flex-1">
           <main className="p-4 max-w-7xl mx-auto">{children}</main>
         </div>
       </div>
