@@ -4,6 +4,8 @@ import type { Task as TaskType, TaskStatus } from 'src/shared';
 import { statusColumnBg, statusPillClass } from 'src/shared/ui';
 import { groupByStatus } from 'src/services/taskService';
 import useAppStore from 'src/store/useAppStore';
+import AddTaskModal from 'src/components/AddTaskModal';
+
 
 const statusLabels: Record<TaskStatus, string> = {
   'waiting': 'En espera',
@@ -12,132 +14,99 @@ const statusLabels: Record<TaskStatus, string> = {
   'abandoned': 'Abandonado',
 };
 
+const formatDueDate = (dueString?: string) => {
+  if (!dueString) return 'Sin fecha';
+  try {
+    const date = new Date(dueString);
+    return date.toLocaleString('es-ES', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch (e) {
+    return dueString;
+  }
+};
+
 export default function Tasks() {
   const tasks = useAppStore((s) => s.tasks);
-  const addTaskAction = useAppStore((s) => s.addTask);
   const updateStatusAction = useAppStore((s) => s.updateTaskStatus);
   const deleteTaskAction = useAppStore((s) => s.deleteTask);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [statusSel, setStatusSel] = useState<TaskStatus>('waiting');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [showForm, setShowForm] = useState(false);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const [searchTerm, setSearchTerm] = useState('');
 
   function updateStatus(id: string, status: TaskStatus) {
     updateStatusAction(id, status);
-  }
-
-  async function addTask(e?: React.FormEvent) {
-    if (e) e.preventDefault();
-    if (!title.trim()) return;
-
-    const due = date ? (time ? `${date} ${time}` : date) : undefined;
-    
-    const newTask: Omit<TaskType, 'id'> = {
-      title: title.trim(),
-      description: description.trim(),
-      due: due,
-      status: statusSel,
-    };
-
-    await addTaskAction(newTask);
-
-    setTitle('');
-    setDescription('');
-    setDate('');
-    setTime('');
-    setStatusSel('waiting');
   }
 
   function deleteTask(id: string) {
     deleteTaskAction(id);
   }
 
-  const grouped = groupByStatus(tasks);
+  const filteredTasks = tasks.filter(task => 
+    task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const grouped = groupByStatus(filteredTasks);
+
+  const totalTasks = tasks.length;
+  const filteredCount = filteredTasks.length;
+  let subtitle = "";
+
+  if (searchTerm) {
+    subtitle = filteredCount === 0 
+        ? `No se encontraron tareas para "${searchTerm}"`
+        : `Mostrando ${filteredCount} de ${totalTasks} tareas`;
+  } else {
+    subtitle = totalTasks === 0 
+        ? "No hay tareas. ¡Agrega una!" 
+        : totalTasks === 1
+        ? "Mostrando 1 tarea"
+        : `Mostrando ${totalTasks} tareas`;
+  }
 
   return (
     <div className="min-h-screen var(--color-background)">
-      <Navbar />
+      <Navbar showHomeButton={true} />
 
       <div className="p-4 max-w-7xl mx-auto">
+        
         <header className="mb-6">
-          <h1 className="text-2xl font-semibold">Tareas</h1>
-          <p className="text-sm var(--color-text)">Tablero simple (simulado).</p>
+          <div className="flex items-center justify-between gap-4">
+            
+            <div className="flex items-center">
+              <h1 className="text-2xl font-semibold flex-shrink-0">Tareas</h1>
+              
+              <div className="w-64 ml-8"> 
+                <Input 
+                  id="search-tasks"
+                  type="text"
+                  placeholder="Buscar tareas..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <Button onClick={() => setIsModalOpen(true)} className="px-4 py-2 flex-shrink-0">
+              <span className="mr-2">+</span>
+              Agregar tarea
+            </Button>
+          </div>
+          
+          <p className="text-sm mt-2" style={{ color: 'var(--color-text-muted)' }}>
+            {subtitle}
+          </p>
         </header>
 
-        <div className="mb-2 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-medium">Agregar tarea</h2>
-            <p className="text-xs var(--color-text)">Crea una nueva tarea y asígnala a una columna.</p>
-          </div>
-          <div>
-            <button
-              type="button"
-              aria-expanded={showForm}
-              onClick={() => setShowForm((s) => !s)}
-              className="p-2 rounded-md hover:text-[var(--color-text-muted)] cursor-pointer"
-              title={showForm ? 'Ocultar formulario' : 'Mostrar formulario'}
-            >
-              {showForm ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <path d="M5 3h14"></path>
-                  <path d="m18 13-6-6-6 6"></path>
-                  <path d="M12 7v14"></path>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
-                  <path d="M12 17V3"></path>
-                  <path d="m6 11 6 6 6-6"></path>
-                  <path d="M19 21H5"></path>
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {showForm && (
-          <form onSubmit={addTask} className="mb-6 grid grid-cols-1 lg:grid-cols-4 gap-3 items-end">
-          <div className="lg:col-span-2">
-            <Input id="new-title" label="Título" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nueva tarea" />
-          </div>
-
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium var(--color-text)">Estado</label>
-            <select id="status" value={statusSel} onChange={(e) => setStatusSel(e.target.value as TaskStatus)} className="block w-full px-3 py-2 border rounded-md"
-                style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-text)' }}>
-
-              <option value="waiting">En espera</option>
-              <option value="in-progress">En proceso</option>
-              <option value="completed">Completado</option>
-              <option value="abandoned">Abandonado</option>
-            </select>
-          </div>
-
-          <div className="flex gap-2">
-            <div className="w-1/2">
-              <label htmlFor="date" className="block text-sm font-medium var(--color-text) mb-1">Fecha</label>
-              <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </div>
-            <div className="w-1/2">
-              <label htmlFor="time" className="block text-sm font-medium var(--color-text) mb-1">Hora</label>
-              <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-            </div>
-          </div>
-
-          <div className="lg:col-span-4">
-            <Input id="desc" label="Descripción (opcional)" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Detalles" />
-          </div>
-
-          <div className="lg:col-span-4 flex gap-2">
-            <Button type="submit" className="px-4 py-2">Agregar tarea</Button>
-            <Button type="button" variant="secondary" onClick={() => { setTitle(''); setDescription(''); setDate(''); setTime(''); setStatusSel('waiting'); }} className="px-4 py-2">Limpiar</Button>
-          </div>
-          </form>
-        )}
 
         <div className="overflow-x-auto">
-          <div className="min-w-[900px] grid grid-cols-4 gap-4">
+          <div className="min-w-[900px] grid grid-cols-4 gap-4 items-start">
                 {(['waiting', 'in-progress', 'completed', 'abandoned'] as TaskStatus[]).map((status) => {
                           return (
                             <section key={status} className={`${statusColumnBg[status]} p-5 rounded-md`}>
@@ -148,61 +117,74 @@ export default function Tasks() {
 
                       <div className="space-y-3">
                         {grouped[status].length === 0 && (
-                          <div className="text-xs text-gray-400">No hay tareas</div>
+                          <div className="text-xs text-gray-400">
+                            {searchTerm ? 'Ninguna tarea coincide' : 'No hay tareas'}
+                          </div>
                         )}
 
-                        {grouped[status].map((task) => (
-                          <Card key={task.id} className={`${task.status === 'completed' ? 'opacity-60' : ''}`} title={task.title}>
-                            <div className="flex justify-end mb-2">
-                              <button
-                              type="button"
-                              onClick={() => deleteTask(task.id)}
-                              className="absolute top-2 right-2 p-1 rounded-md hover:bg-gray-100"
-                              style={{ color: 'var(--color-text-muted)' }}
-                              aria-label={`Eliminar ${task.title}`}
+                        {grouped[status].map((task) => {
+                          const now = Date.now();
+                          const isOverdue = task.due && new Date(task.due).getTime() < now && task.status !== 'completed';
+
+                          return (
+                            <Card 
+                              key={task.id} 
+                              className={`relative transition-all duration-200 hover:shadow-lg hover:scale-[1.02] ${task.status === 'completed' ? 'opacity-60' : ''} ${isOverdue ? 'border-2 border-red-500' : ''}`} 
+                              title={task.title}
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
-                                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
-                              </svg>
-                            </button>
-                            </div>
-                            <div className="text-sm mb-3">{task.description}</div>
-                            <div className="text-xs var(--color-text) mb-4">{task.due}</div>
-
-                            <div className="flex items-center justify-between gap-2">
-                              <div className={`text-sm ${task.status === 'completed' ? 'line-through var(--color-text)' : 'var(--color-text)'}`}>
-                                {statusLabels[task.status]}
+                              <div className="flex justify-end mb-2">
+                                <button
+                                type="button"
+                                onClick={() => deleteTask(task.id)}
+                                className="absolute top-2 right-2 p-1 rounded-md hover:bg-gray-100"
+                                style={{ color: 'var(--color-text-muted)' }}
+                                aria-label={`Eliminar ${task.title}`}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                                  <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                                </svg>
+                              </button>
+                              </div>
+                              
+                              {task.description && (
+                                <p className="text-sm mb-3 var(--color-text) truncate" style={{ color: 'var(--color-text-muted)'}}>
+                                  {task.description}
+                                </p>
+                              )}
+                              
+                              <div 
+                                className={`text-xs mb-4 ${isOverdue ? 'font-bold' : 'var(--color-text)'}`}
+                                style={isOverdue ? { color: 'var(--color-error)' } : {}}
+                              >
+                                {formatDueDate(task.due)}
                               </div>
 
-                              <div className="flex flex-wrap items-center gap-3">
-                                {task.status !== 'waiting' && (
-                                  <Button variant="secondary" className="text-xs px-3 py-2 rounded-md" onClick={() => updateStatus(task.id, 'waiting')}>
-                                    Espera
-                                  </Button>
-                                )}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className={`text-sm ${task.status === 'completed' ? 'line-through var(--color-text)' : 'var(--color-text)'}`}>
+                                  {statusLabels[task.status]}
+                                </div>
 
-                                {task.status !== 'in-progress' && (
-                                  <Button variant="primary" className="text-xs px-3 py-2 rounded-md" onClick={() => updateStatus(task.id, 'in-progress')}>
-                                    En proceso
-                                  </Button>
-                                )}
-
-                                {task.status !== 'completed' && (
-                                  <Button variant="primary" className="text-xs px-3 py-2 rounded-md" onClick={() => updateStatus(task.id, 'completed')}>
-                                    Completar
-                                  </Button>
-                                )}
-
-                                {task.status !== 'abandoned' && (
-                                  <Button variant="secondary" className="text-xs px-3 py-2 rounded-md" onClick={() => updateStatus(task.id, 'abandoned')}>
-                                    Abandonar
-                                  </Button>
-                                )}
+                                <select
+                                  value={task.status}
+                                  onChange={(e) => updateStatus(task.id, e.target.value as TaskStatus)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-xs px-3 py-2 rounded-md border"
+                                  style={{ 
+                                    backgroundColor: 'var(--color-surface)', 
+                                    color: 'var(--color-text)', 
+                                    borderColor: 'var(--color-border)' 
+                                  }}
+                                >
+                                  <option value="waiting">En espera</option>
+                                  <option value="in-progress">En proceso</option>
+                                  <option value="completed">Completado</option>
+                                  <option value="abandoned">Abandonado</option>
+                                </select>
                               </div>
-                            </div>
-                          </Card>
-                        ))}
+                            </Card>
+                          );
+                        })}
                       </div>
                     </section>
                   );
@@ -210,6 +192,11 @@ export default function Tasks() {
           </div>
         </div>
       </div>
+
+      <AddTaskModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
     </div>
   );
 }

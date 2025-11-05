@@ -4,10 +4,11 @@ import { useNavigate } from 'react-router-dom';
 
 type NavbarProps = {
   onToggleSidebar?: () => void;
-  onLogout?: () => void; // optional callback when logout is clicked
+  onLogout?: () => void;
+  showHomeButton?: boolean; 
 };
 
-export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
+export default function Navbar({ onToggleSidebar, onLogout, showHomeButton = false }: NavbarProps) { 
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const user = useAppStore((s) => s.user);
@@ -51,7 +52,6 @@ export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Mobile: toggle button */}
             <button
               onClick={onToggleSidebar}
               className="md:hidden p-2 rounded-md hover:bg-gray-100 focus:outline-none"
@@ -62,13 +62,36 @@ export default function Navbar({ onToggleSidebar, onLogout }: NavbarProps) {
               </svg>
             </button>
 
-            <button 
-              onClick={() => navigate('/')}
-              className="text-lg font-semibold hover:opacity-80 transition-opacity" 
+            {showHomeButton && ( 
+              <button 
+                onClick={() => navigate('/')}
+                className="p-2 rounded-md hover:bg-gray-100 focus:outline-none" 
+                style={{ color: 'var(--color-text)' }}
+                aria-label="Ir a Inicio"
+                title="Ir a Inicio"
+              >
+                <svg 
+                  className="h-5 w-5" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor" 
+                  strokeWidth={2}
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" 
+                  />
+                </svg>
+              </button>
+            )}
+
+            <div
+              className="text-lg font-semibold" 
               style={{ color: 'var(--color-text)' }}
             >
               Task Manager
-            </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-4 relative">
