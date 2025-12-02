@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 
 import { Button, Layout, Input } from "src/components";
 import useAppStore from 'src/store/useAppStore';
-import { getUserProfile, updateUserProfile, subscribeToUserProfile, createUserProfile } from 'src/services/firestoreService';
+import { getProfileApi, updateProfileApi, createProfileApi } from 'src/services/apiProfileService';
 import type { UserProfile } from 'src/shared';
 
 const Profile: React.FC = () => {
@@ -21,24 +21,31 @@ const Profile: React.FC = () => {
     location: '',
   });
 
-  // Suscribirse a cambios en el perfil en tiempo real
+  // Obtener perfil del backend API al montar
   useEffect(() => {
     if (!user?.uid) return;
-    
+    let mounted = true;
     setLoading(true);
-    const unsubscribe = subscribeToUserProfile(user.uid, (updatedProfile) => {
-      setProfile(updatedProfile);
-      if (updatedProfile) {
-        setEditForm({
-          displayName: updatedProfile.displayName || '',
-          phone: updatedProfile.phone || '',
-          location: updatedProfile.location || '',
-        });
+    (async () => {
+      try {
+        const p = await getProfileApi(user.uid);
+        if (!mounted) return;
+        setProfile(p);
+        if (p) {
+          setEditForm({
+            displayName: p.displayName || '',
+            phone: p.phone || '',
+            location: p.location || '',
+          });
+        }
+      } catch (e) {
+        console.error('Error fetching profile from API:', e);
+      } finally {
+        if (mounted) setLoading(false);
       }
-      setLoading(false);
-    });
-    
-    return () => unsubscribe();
+    })();
+
+    return () => { mounted = false; };
   }, [user?.uid]);
 
   const handleCreateProfile = async () => {
@@ -46,11 +53,13 @@ const Profile: React.FC = () => {
     
     setCreatingProfile(true);
     try {
-      await createUserProfile(user.uid, user.email, user.name || undefined);
+      await createProfileApi({ email: user.email, displayName: user.name || undefined });
       console.log('✅ Perfil creado exitosamente');
-      // El perfil se actualizará automáticamente gracias a la suscripción
+      // Re-fetch profile
+      const p = await getProfileApi(user.uid);
+      setProfile(p);
     } catch (error) {
-      console.error('Error creating profile:', error);
+      console.error('Error creating profile via API:', error);
       alert('Error al crear el perfil. Por favor intenta de nuevo.');
     } finally {
       setCreatingProfile(false);
@@ -77,14 +86,15 @@ const Profile: React.FC = () => {
     
     setSaving(true);
     try {
-      await updateUserProfile(user.uid, {
+      const updated = await updateProfileApi(user.uid, {
         displayName: editForm.displayName || null,
         phone: editForm.phone || null,
         location: editForm.location || null,
       });
+      setProfile(updated);
       setIsEditing(false);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('Error updating profile via API:', error);
       alert('Error al actualizar el perfil');
     } finally {
       setSaving(false);
