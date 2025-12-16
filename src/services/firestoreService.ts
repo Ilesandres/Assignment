@@ -1,299 +1,160 @@
 import { db } from 'src/config/firebase';
 import {
   collection,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
   query,
   where,
-  orderBy,
   onSnapshot,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  serverTimestamp,
   getDocs,
-  setDoc,
-  getDoc,
+  addDoc,
+  deleteDoc,
+  serverTimestamp,
+  type DocumentData,
+  type QuerySnapshot,
+  type DocumentReference,
 } from 'firebase/firestore';
-import type { Task as TaskType, UserProfile } from 'src/shared';
+import type { Task as TaskType, TaskStatus, UserProfile } from 'src/shared/types';
+import type { Unsubscribe } from 'firebase/auth';
 
-// Top-level tasks collection with owner field. All exported functions
-// filter by ownerId and normalize Firestore timestamps to ISO strings.
+/**
+ * Convierte un documento de Firestore a un objeto Typed de TypeScript.
+ */
+const normalizeDoc = <T>(doc: DocumentData): T & { id: string } => ({
+  ...(doc.data() as T),
+  id: doc.id,
+});
 
-function normalizeDoc(d: any): TaskType {
-  const data = d.data ? d.data() : d;
-  const raw = d.data ? d.data() : data;
-  const due = raw.due
-    ? raw.due.seconds
-      ? new Date(raw.due.seconds * 1000).toISOString()
-      : String(raw.due)
-    : undefined;
-  return {
-    id: d.id,
-    title: raw.title || '',
-    description: raw.description || '',
-    status: raw.status || 'waiting',
-    due,
-    owner: raw.owner,
-  } as TaskType;
-}
 
-export function subscribeToUserTasks(ownerId: string, onUpdate: (tasks: TaskType[]) => void) {
-  if (!ownerId) return () => {};
-  // Listen to two possible locations:
-  // 1) top-level `tasks` collection where documents have `owner` field
-  // 2) legacy per-user subcollection `users/{uid}/tasks`
-  const colTop = collection(db, 'tasks');
-  const qTop = query(colTop, where('owner', '==', ownerId), orderBy('due', 'asc'));
+// =========================================================================
+// COLECCIONES Y REFERENCIAS
+// =========================================================================
 
-  const colSub = collection(db, 'users', ownerId, 'tasks');
+// La colección principal para los perfiles de usuario
+const profilesCollection = collection(db, 'userProfiles');
 
-  let latestTop: Record<string, TaskType> = {};
-  let latestSub: Record<string, TaskType> = {};
 
-  function emit() {
-    const merged = { ...latestTop, ...latestSub };
-    const arr = Object.values(merged).sort((a, b) => {
-      const da = a.due ? new Date(a.due).getTime() : 0;
-      const dbt = b.due ? new Date(b.due).getTime() : 0;
-      return da - dbt;
-    });
-    onUpdate(arr as TaskType[]);
-  }
+// =========================================================================
+// FUNCIONES DE PERFIL (MANTENER Y CORREGIR)
+// =========================================================================
 
-  let unsubTop: (() => void) | null = null;
-  // attach an error handler so permission-denied doesn't become an uncaught error
-  unsubTop = onSnapshot(
-    qTop,
-    (snap) => {
-      const tasks: Record<string, TaskType> = {};
-      snap.forEach((d) => {
-        const t = normalizeDoc(d);
-        tasks[t.id] = t;
-      });
-      latestTop = tasks;
-      emit();
-    },
-    (err: any) => {
-      // If permissions prevent reading top-level tasks, stop that listener and
-      // continue using the legacy per-user subcollection only.
-      try {
-        if (err && err.code === 'permission-denied') {
-          console.warn('[firestoreService] top-level tasks listener permission denied, disabling top-level listener.');
-        } else {
-          console.error('[firestoreService] snapshot error (top-level):', err);
-        }
-      } finally {
-        try { if (unsubTop) unsubTop(); } catch (e) {}
-        latestTop = {};
-        emit();
-      }
-    }
-  );
-
-  const unsubSub = onSnapshot(colSub, (snap) => {
-    const tasks: Record<string, TaskType> = {};
-    snap.forEach((d) => {
-      const data = d.data();
-      const due = data.due ? (data.due.seconds ? new Date(data.due.seconds * 1000).toISOString() : String(data.due)) : undefined;
-      tasks[d.id] = {
-        id: d.id,
-        title: data.title || '',
-        description: data.description || '',
-        status: data.status || 'waiting',
-        due,
-        owner: ownerId,
-      } as TaskType;
-    });
-    latestSub = tasks;
-    emit();
-  });
-
-  return () => {
-    try { unsubTop(); } catch (e) {}
-    try { unsubSub(); } catch (e) {}
-  };
-}
-
-export async function getUserTasksOnce(ownerId: string) {
-  if (!ownerId) return [] as TaskType[];
-  // gather from top-level tasks with owner
-  const colTop = collection(db, 'tasks');
-  const qTop = query(colTop, where('owner', '==', ownerId), orderBy('due', 'asc'));
-  const map: Record<string, TaskType> = {};
-  try {
-    const snapTop = await getDocs(qTop);
-    snapTop.forEach((d) => {
-      const t = normalizeDoc(d);
-      map[t.id] = t;
-    });
-  } catch (err: any) {
-    if (err && err.code === 'permission-denied') {
-      // permission denied when reading top-level tasks: ignore and
-      // proceed to try the legacy subcollection
-      console.warn('[firestoreService] getUserTasksOnce: permission-denied for top-level tasks, falling back to users/{uid}/tasks');
-    } else {
-      throw err;
-    }
-  }
-
-  // also gather from legacy per-user subcollection
-  const colSub = collection(db, 'users', ownerId, 'tasks');
-  try {
-    const snapSub = await getDocs(colSub);
-    snapSub.forEach((d) => {
-      const data = d.data() as any;
-      const due = data.due ? (data.due.seconds ? new Date(data.due.seconds * 1000).toISOString() : String(data.due)) : undefined;
-      map[d.id] = {
-        id: d.id,
-        title: data.title || '',
-        description: data.description || '',
-        status: data.status || 'waiting',
-        due,
-        owner: ownerId,
-      } as TaskType;
-    });
-  } catch (e) {
-    // ignore if subcollection doesn't exist or permission denied
-  }
-
-  const list = Object.values(map).sort((a, b) => {
-    const da = a.due ? new Date(a.due).getTime() : 0;
-    const dbt = b.due ? new Date(b.due).getTime() : 0;
-    return da - dbt;
-  });
-  return list;
-}
-
-export async function addTaskFirestore(task: Partial<TaskType> & { owner: string }) {
-  const col = collection(db, 'tasks');
-  const payload: any = {
-    title: task.title || '',
-    description: task.description || '',
-    status: task.status || 'waiting',
-    due: task.due ?? null,
-    owner: task.owner,
-    createdAt: serverTimestamp(),
-  };
-  const ref = await addDoc(col, payload);
-  return ref.id;
-}
-
-export async function updateTaskFirestore(id: string, patch: Partial<TaskType>) {
-  const ref = doc(db, 'tasks', id);
-  const payload = { ...patch } as any;
-  if (payload.id) delete payload.id;
-  await updateDoc(ref, payload);
-}
-
-export async function deleteTaskFirestore(id: string) {
-  const ref = doc(db, 'tasks', id);
-  await deleteDoc(ref);
-}
-
-// ============ USER PROFILE FUNCTIONS ============
-
+/**
+ * Crea un perfil de usuario inicial después del registro.
+ */
 export async function createUserProfile(uid: string, email: string, displayName?: string): Promise<void> {
-  const profileRef = doc(db, 'userProfiles', uid);
-  const timestamp = serverTimestamp();
+  const profileDocRef = doc(profilesCollection, uid);
+  const timestamp = serverTimestamp(); // FieldValue (Firestore timestamp placeholder)
   
-  const profile: Partial<UserProfile> = {
+  // CORRECCIÓN: Incluir todas las propiedades requeridas por UserProfile
+  const initialProfile: UserProfile = { 
     uid,
     email,
     displayName: displayName || null,
-    photoURL: `https://i.pravatar.cc/150?u=${uid}`, // URL de avatar automática basada en UID
+    // Propiedades que faltaban:
+    photoURL: `https://i.pravatar.cc/150?u=${uid}`, // Valor predeterminado para satisfacer el tipo
     phone: null,
     location: null,
-    memberSince: new Date().toISOString(),
+    memberSince: new Date().toISOString(), // Valor predeterminado para satisfacer el tipo
+    // Timestamps
     createdAt: timestamp,
     updatedAt: timestamp,
   };
-  
-  await setDoc(profileRef, profile);
+
+  await setDoc(profileDocRef, initialProfile);
 }
 
+/**
+ * Obtiene el perfil de un usuario una sola vez.
+ */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  try {
-    const profileRef = doc(db, 'userProfiles', uid);
-    const profileSnap = await getDoc(profileRef);
-    
-    if (!profileSnap.exists()) {
-      return null;
-    }
-    
-    const data = profileSnap.data();
-    return {
-      uid: data.uid,
-      email: data.email,
-      displayName: data.displayName,
-      photoURL: data.photoURL,
-      phone: data.phone,
-      location: data.location,
-      memberSince: data.memberSince,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-    } as UserProfile;
-  } catch (error) {
-    console.error('Error getting user profile:', error);
-    return null;
+  const profileDocRef = doc(profilesCollection, uid);
+  const docSnap = await getDoc(profileDocRef);
+
+  if (docSnap.exists()) {
+    return normalizeDoc<UserProfile>(docSnap) as UserProfile;
   }
+  return null;
 }
 
-export async function updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<void> {
-  const profileRef = doc(db, 'userProfiles', uid);
-  const payload = { ...updates, updatedAt: serverTimestamp() };
-  
-  // Eliminar campos que no deben ser actualizables
+/**
+ * Actualiza parcialmente un perfil de usuario.
+ */
+export async function updateUserProfile(uid: string, patch: Partial<UserProfile>): Promise<void> {
+  const profileDocRef = doc(profilesCollection, uid);
+  // Aseguramos que solo se envíen campos actualizables
+  const payload = { ...patch, updatedAt: serverTimestamp() };
   delete (payload as any).uid;
   delete (payload as any).createdAt;
-  delete (payload as any).photoURL; // La foto no se edita
-  
-  await updateDoc(profileRef, payload);
+  delete (payload as any).email;
+  delete (payload as any).memberSince;
+
+  await updateDoc(profileDocRef, payload as DocumentData);
 }
 
-export function subscribeToUserProfile(uid: string, onUpdate: (profile: UserProfile | null) => void): () => void {
-  if (!uid) return () => {};
-  
-  const profileRef = doc(db, 'userProfiles', uid);
-  
-  const unsubscribe = onSnapshot(
-    profileRef,
-    (snapshot) => {
-      if (!snapshot.exists()) {
-        onUpdate(null);
-        return;
-      }
-      
-      const data = snapshot.data();
-      const profile: UserProfile = {
-        uid: data.uid,
-        email: data.email,
-        displayName: data.displayName,
-        photoURL: data.photoURL,
-        phone: data.phone,
-        location: data.location,
-        memberSince: data.memberSince,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-      };
-      onUpdate(profile);
-    },
-    (error) => {
-      console.error('Error subscribing to user profile:', error);
-      onUpdate(null);
+/**
+ * Suscribe un listener a los cambios del perfil del usuario (Real-time).
+ */
+export function subscribeToUserProfile(uid: string, onUpdate: (profile: UserProfile) => void): Unsubscribe {
+  const profileDocRef = doc(profilesCollection, uid);
+  return onSnapshot(profileDocRef, (docSnap) => {
+    if (docSnap.exists()) {
+      onUpdate(normalizeDoc<UserProfile>(docSnap) as UserProfile);
     }
-  );
-  
-  return unsubscribe;
+  });
 }
 
-export default {
-  subscribeToUserTasks,
-  getUserTasksOnce,
-  addTaskFirestore,
-  updateTaskFirestore,
-  deleteTaskFirestore,
-  createUserProfile,
-  getUserProfile,
-  updateUserProfile,
-  subscribeToUserProfile,
-};
+// =========================================================================
+// FUNCIONES DE TAREAS (OBSOLETAS - COMENTADAS PARA USAR FASTAPI)
+// =========================================================================
+
+// Hemos comentado las funciones de Tareas aquí para forzar el uso 
+// de los endpoints de FastAPI y cumplir con la arquitectura.
+
+/**
+ * [OBSOLETO - USAR FASTAPI]: Suscribe un listener a las tareas del usuario (Real-time).
+ */
+/*
+export function subscribeToUserTasks(ownerId: string, onUpdate: (tasks: TaskType[]) => void): Unsubscribe {
+  console.warn('[DEPRECATED] Use FastAPI API for task fetching.');
+  return () => {};
+}
+*/
+
+/**
+ * [OBSOLETO - USAR FASTAPI]: Obtiene las tareas de un usuario una sola vez.
+ */
+/*
+export async function getUserTasksOnce(ownerId: string): Promise<TaskType[]> {
+  console.warn('[DEPRECATED] Use FastAPI API for task fetching.');
+  return [];
+}
+*/
+
+/**
+ * [OBSOLETO - USAR FASTAPI]: Agrega una nueva tarea.
+ */
+/*
+export async function addTaskFirestore(task: Omit<TaskType, 'id'> & { owner: string }): Promise<TaskType> {
+  throw new Error('[DEPRECATED] Use FastAPI endpoint: POST /tasks/');
+}
+*/
+
+/**
+ * [OBSOLETO - USAR FASTAPI]: Actualiza una tarea.
+ */
+/*
+export async function updateTaskFirestore(id: string, patch: Partial<TaskType>): Promise<void> {
+  throw new Error('[DEPRECATED] Use FastAPI endpoint: PUT /tasks/{id}');
+}
+*/
+
+/**
+ * [OBSOLETO - USAR FASTAPI]: Elimina una tarea.
+ */
+/*
+export async function deleteTaskFirestore(id: string): Promise<void> {
+  throw new Error('[DEPRECATED] Use FastAPI endpoint: DELETE /tasks/{id}');
+}
+*/
